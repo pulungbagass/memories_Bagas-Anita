@@ -1,18 +1,21 @@
-import React, { useState, useEffect } from 'react';
-import { GlassModal } from './GlassModal';
-import { GlassButton } from './GlassButton';
-import { 
-  Database, 
-  Cloud, 
-  KeyRound, 
-  CheckCircle2, 
-  Copy, 
-  Check, 
+import React, { useState, useEffect } from "react";
+import { GlassModal } from "./GlassModal";
+import { GlassButton } from "./GlassButton";
+import {
+  Database,
+  Cloud,
+  KeyRound,
+  CheckCircle2,
+  Copy,
+  Check,
   AlertTriangle,
-  Server
-} from 'lucide-react';
-import { checkVercelServiceStatus, VercelServiceStatus } from '../../lib/vercelClient';
-import { memoryStorage } from '../../lib/storage';
+  Server,
+} from "lucide-react";
+import {
+  checkVercelServiceStatus,
+  VercelServiceStatus,
+} from "../../lib/vercelClient";
+import { memoryStorage } from "../../lib/storage";
 
 export const VERCEL_POSTGRES_SCHEMA_SQL = `-- Vercel Postgres Tables Schema for Bagas & Anita
 
@@ -79,12 +82,15 @@ interface SettingsModalProps {
 export const SettingsModal: React.FC<SettingsModalProps> = ({
   isOpen,
   onClose,
-  onRefreshData
+  onRefreshData,
 }) => {
-  const [activeTab, setActiveTab] = useState<'status' | 'schema' | 'auth'>('status');
+  const [activeTab, setActiveTab] = useState<"status" | "schema" | "auth">(
+    "status",
+  );
   const [copied, setCopied] = useState(false);
   const [resetConfirm, setResetConfirm] = useState(false);
-  const [serviceStatus, setServiceStatus] = useState<VercelServiceStatus | null>(null);
+  const [serviceStatus, setServiceStatus] =
+    useState<VercelServiceStatus | null>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -120,38 +126,38 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       {/* Tabs */}
       <div className="flex border-b border-white/10 mb-6 gap-2">
         <button
-          onClick={() => setActiveTab('status')}
+          onClick={() => setActiveTab("status")}
           className={`pb-2.5 px-3 text-sm font-medium border-b-2 transition-colors cursor-pointer ${
-            activeTab === 'status'
-              ? 'border-pink-500 text-pink-400'
-              : 'border-transparent text-slate-400 hover:text-slate-200'
+            activeTab === "status"
+              ? "border-pink-500 text-pink-400"
+              : "border-transparent text-slate-400 hover:text-slate-200"
           }`}
         >
           Storage Status
         </button>
         <button
-          onClick={() => setActiveTab('schema')}
+          onClick={() => setActiveTab("schema")}
           className={`pb-2.5 px-3 text-sm font-medium border-b-2 transition-colors cursor-pointer ${
-            activeTab === 'schema'
-              ? 'border-pink-500 text-pink-400'
-              : 'border-transparent text-slate-400 hover:text-slate-200'
+            activeTab === "schema"
+              ? "border-pink-500 text-pink-400"
+              : "border-transparent text-slate-400 hover:text-slate-200"
           }`}
         >
           Postgres Schema
         </button>
         <button
-          onClick={() => setActiveTab('auth')}
+          onClick={() => setActiveTab("auth")}
           className={`pb-2.5 px-3 text-sm font-medium border-b-2 transition-colors cursor-pointer ${
-            activeTab === 'auth'
-              ? 'border-pink-500 text-pink-400'
-              : 'border-transparent text-slate-400 hover:text-slate-200'
+            activeTab === "auth"
+              ? "border-pink-500 text-pink-400"
+              : "border-transparent text-slate-400 hover:text-slate-200"
           }`}
         >
           Couple Auth & PIN
         </button>
       </div>
 
-      {activeTab === 'status' && (
+      {activeTab === "status" && (
         <div className="space-y-4">
           <div className="p-4 rounded-2xl bg-white/5 border border-white/10 flex items-start gap-3.5">
             <div className="p-2.5 rounded-xl bg-pink-500/20 text-pink-400 shrink-0">
@@ -165,7 +171,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 </span>
               </div>
               <p className="text-slate-300 text-xs mt-1 leading-relaxed">
-                Photos, videos, and voice notes are automatically organized into category folders (<code className="text-pink-300">photos/</code>, <code className="text-pink-300">videos/</code>, <code className="text-pink-300">audio/</code>) and stored permanently on Vercel Native Blob storage.
+                Photos, videos, and voice notes are automatically organized into
+                category folders (<code className="text-pink-300">photos/</code>
+                , <code className="text-pink-300">videos/</code>,{" "}
+                <code className="text-pink-300">audio/</code>) and stored
+                permanently on Vercel Native Blob storage.
               </p>
             </div>
           </div>
@@ -182,7 +192,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 </span>
               </div>
               <p className="text-slate-300 text-xs mt-1 leading-relaxed">
-                Memories, Love Letters, Sticky Notes, and Audio tracks are synced automatically upon page load and reload. All updates reflect instantly with zero latency.
+                Memories, Love Letters, Sticky Notes, and Audio tracks are
+                synced automatically upon page load and reload. All updates
+                reflect instantly with zero latency.
               </p>
             </div>
           </div>
@@ -200,11 +212,24 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             ) : (
               <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-between">
                 <span className="text-xs text-rose-300 flex items-center gap-1.5">
-                  <AlertTriangle className="w-4 h-4" /> Reset all local memories?
+                  <AlertTriangle className="w-4 h-4" /> Reset all local
+                  memories?
                 </span>
                 <div className="flex gap-2">
-                  <GlassButton size="sm" variant="ghost" onClick={() => setResetConfirm(false)}>Cancel</GlassButton>
-                  <GlassButton size="sm" variant="danger" onClick={handleResetData}>Confirm Reset</GlassButton>
+                  <GlassButton
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setResetConfirm(false)}
+                  >
+                    Cancel
+                  </GlassButton>
+                  <GlassButton
+                    size="sm"
+                    variant="danger"
+                    onClick={handleResetData}
+                  >
+                    Confirm Reset
+                  </GlassButton>
                 </div>
               </div>
             )}
@@ -212,17 +237,25 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         </div>
       )}
 
-      {activeTab === 'schema' && (
+      {activeTab === "schema" && (
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-xs text-slate-400">PostgreSQL table definitions:</span>
+            <span className="text-xs text-slate-400">
+              PostgreSQL table definitions:
+            </span>
             <GlassButton
               size="sm"
               variant="secondary"
               onClick={handleCopySchema}
-              icon={copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+              icon={
+                copied ? (
+                  <Check className="w-3.5 h-3.5 text-emerald-400" />
+                ) : (
+                  <Copy className="w-3.5 h-3.5" />
+                )
+              }
             >
-              {copied ? 'Copied!' : 'Copy SQL'}
+              {copied ? "Copied!" : "Copy SQL"}
             </GlassButton>
           </div>
           <pre className="p-4 rounded-xl bg-slate-950/80 border border-white/10 text-xs font-mono text-pink-200 overflow-x-auto max-h-72">
@@ -231,7 +264,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         </div>
       )}
 
-      {activeTab === 'auth' && (
+      {activeTab === "auth" && (
         <div className="space-y-3">
           <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-3">
             <div className="text-xs font-semibold text-slate-300 uppercase tracking-wider">
@@ -242,20 +275,31 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <div className="text-pink-300 font-semibold flex items-center gap-1.5">
                   <KeyRound className="w-3.5 h-3.5" /> Bagas ID
                 </div>
-                <div className="text-white">ID: <code className="text-pink-200 font-mono">Bagas</code></div>
-                <div className="text-white">PIN: <code className="text-pink-200 font-mono">1803</code></div>
+                <div className="text-white">
+                  ID: <code className="text-pink-200 font-mono">Bagas</code>
+                </div>
+                <div className="text-white">
+                  PIN: <code className="text-pink-200 font-mono">1803</code>
+                </div>
               </div>
 
               <div className="p-3 rounded-xl bg-slate-950/60 border border-white/5 space-y-1">
                 <div className="text-pink-300 font-semibold flex items-center gap-1.5">
                   <KeyRound className="w-3.5 h-3.5" /> Anita ID
                 </div>
-                <div className="text-white">ID: <code className="text-pink-200 font-mono">Anita</code></div>
-                <div className="text-white">PIN: <code className="text-pink-200 font-mono">1209</code></div>
+                <div className="text-white">
+                  ID: <code className="text-pink-200 font-mono">Anita</code>
+                </div>
+                <div className="text-white">
+                  PIN: <code className="text-pink-200 font-mono">1209</code>
+                </div>
               </div>
             </div>
             <div className="text-[11px] text-slate-400">
-              Universal master password: <code className="text-pink-300 font-mono">saya123</code>
+              Universal master password:{" "}
+              <code className="text-pink-300 font-mono">
+                bagas ganteng banget
+              </code>
             </div>
           </div>
         </div>
