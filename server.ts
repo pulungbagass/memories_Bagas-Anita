@@ -226,13 +226,58 @@ async function ensureTables() {
 // API Endpoints
 // -------------------------------------------------------------
 
-// 1. Health & Storage Status
-app.get('/api/health', (req, res) => {
+// 1. Health & Storage Status with Live Diagnostic Check
+app.get('/api/health', async (req, res) => {
+  const startTime = Date.now();
+  let dbPingMs: number | null = null;
+  let dbError: string | null = null;
+  let tablesFound: string[] = [];
+
+  if (hasPostgres()) {
+    try {
+      const pingStart = Date.now();
+      await sql`SELECT 1;`;
+      dbPingMs = Date.now() - pingStart;
+
+      // Check existing tables
+      const tableCheck = await sql`
+        SELECT table_name 
+        FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+          AND table_name IN ('gallery', 'letters', 'notes', 'audios');
+      `;
+      tablesFound = tableCheck.rows.map((r: any) => r.table_name);
+    } catch (e: any) {
+      dbError = e.message;
+    }
+  }
+
+  const token = getBlobToken();
+  const tokenPreview = token ? `${token.substring(0, 15)}...` : null;
+
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
-    hasBlobToken: hasBlobToken(),
-    hasPostgres: hasPostgres(),
+    executionTimeMs: Date.now() - startTime,
+    blob: {
+      hasToken: hasBlobToken(),
+      tokenPreview,
+      status: hasBlobToken() ? 'Connected' : 'Missing BLOB_READ_WRITE_TOKEN',
+    },
+    postgres: {
+      hasConfig: hasPostgres(),
+      pingMs: dbPingMs,
+      error: dbError,
+      status: hasPostgres() ? (dbError ? 'Error Connecting' : 'Connected') : 'Missing POSTGRES_URL',
+      tables: tablesFound,
+    },
+    environment: {
+      isVercel: Boolean(process.env.VERCEL),
+      nodeEnv: process.env.NODE_ENV || 'development',
+      availableEnvKeys: Object.keys(process.env).filter(k => 
+        k.startsWith('POSTGRES') || k.startsWith('BLOB') || k === 'VERCEL'
+      ),
+    },
     storageType: hasBlobToken() && hasPostgres() ? 'Vercel Native (Blob + Postgres)' : 'Persistent Storage',
   });
 });
