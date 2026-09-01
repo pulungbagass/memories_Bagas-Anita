@@ -281,8 +281,8 @@ app.get('/api/health', async (req, res) => {
   });
 });
 
-// 2. Fetch All Data on Startup / Reload
-app.get('/api/all-data', async (req, res) => {
+// 2. Fetch All Data on Startup / Reload (Supports both /api/data and /api/all-data)
+const handleGetAllData = async (req: express.Request, res: express.Response) => {
   try {
     if (hasPostgres()) {
       await ensureTables();
@@ -313,6 +313,51 @@ app.get('/api/all-data', async (req, res) => {
       notes: fallbackNotes,
       audios: fallbackAudios,
     });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+app.get('/api/all-data', handleGetAllData);
+app.get('/api/data', handleGetAllData);
+
+app.post('/api/data', async (req, res) => {
+  try {
+    const { table, data } = req.body || {};
+    if (!table || !data) return res.status(400).json({ success: false, error: 'Table and data required' });
+    const id = data.id || `${table.slice(0, 3)}_${Date.now()}`;
+    const createdAt = data.createdAt || new Date().toISOString();
+    const item = { ...data, id, createdAt };
+
+    if (hasPostgres()) {
+      await ensureTables();
+      if (table === 'gallery') {
+        await sql`
+          INSERT INTO gallery (id, title, description, media_type, url, thumbnail_url, author, category, date, location, is_favorite, aspect_ratio, created_at)
+          VALUES (${id}, ${data.title}, ${data.description || ''}, ${data.mediaType || 'photo'}, ${data.url}, ${data.thumbnailUrl || data.url}, ${data.author}, ${data.category || 'Dates'}, ${data.date}, ${data.location || ''}, ${Boolean(data.isFavorite)}, ${data.aspectRatio || 1.33}, ${createdAt})
+          ON CONFLICT (id) DO UPDATE SET title = EXCLUDED.title, description = EXCLUDED.description, is_favorite = EXCLUDED.is_favorite;
+        `;
+      } else if (table === 'letters') {
+        await sql`
+          INSERT INTO letters (id, title, content, sender, recipient, date, stamp_emoji, is_read, paper_color, created_at)
+          VALUES (${id}, ${data.title}, ${data.content}, ${data.sender}, ${data.recipient}, ${data.date}, ${data.stampEmoji || '💌'}, ${Boolean(data.isRead)}, ${data.paperColor || 'rose'}, ${createdAt})
+          ON CONFLICT (id) DO UPDATE SET title = EXCLUDED.title, content = EXCLUDED.content, is_read = EXCLUDED.is_read;
+        `;
+      } else if (table === 'notes') {
+        await sql`
+          INSERT INTO notes (id, text, author, color, date, is_pinned, emoji, created_at)
+          VALUES (${id}, ${data.text}, ${data.author}, ${data.color || 'pink'}, ${data.date}, ${Boolean(data.isPinned)}, ${data.emoji || '✨'}, ${createdAt})
+          ON CONFLICT (id) DO UPDATE SET text = EXCLUDED.text, is_pinned = EXCLUDED.is_pinned;
+        `;
+      } else if (table === 'audios') {
+        await sql`
+          INSERT INTO audios (id, title, artist, url, duration, author, type, date, cover_url, description, created_at)
+          VALUES (${id}, ${data.title}, ${data.artist || 'Together'}, ${data.url}, ${data.duration || '3:00'}, ${data.author}, ${data.type || 'song'}, ${data.date}, ${data.coverUrl || ''}, ${data.description || ''}, ${createdAt})
+          ON CONFLICT (id) DO UPDATE SET title = EXCLUDED.title, artist = EXCLUDED.artist;
+        `;
+      }
+    }
+    res.json({ success: true, item });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });
   }

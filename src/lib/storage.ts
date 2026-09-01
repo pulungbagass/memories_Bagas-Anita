@@ -215,22 +215,27 @@ class StorageManager {
     audios?: AudioMemory[];
   }> {
     try {
-      const res = await fetch('/api/all-data');
-      if (!res.ok) throw new Error('API request failed');
+      // Try /api/data first, then fallback to /api/all-data
+      let res = await fetch('/api/data', { cache: 'no-store' });
+      if (!res.ok) {
+        res = await fetch('/api/all-data', { cache: 'no-store' });
+      }
 
-      const data = await res.json();
-      if (data.success) {
-        if (data.gallery) this.saveGallery(data.gallery);
-        if (data.letters) this.saveLetters(data.letters);
-        if (data.notes) this.saveNotes(data.notes);
-        if (data.audios) this.saveAudios(data.audios);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) {
+          if (Array.isArray(data.gallery) && data.gallery.length > 0) this.saveGallery(data.gallery);
+          if (Array.isArray(data.letters) && data.letters.length > 0) this.saveLetters(data.letters);
+          if (Array.isArray(data.notes) && data.notes.length > 0) this.saveNotes(data.notes);
+          if (Array.isArray(data.audios) && data.audios.length > 0) this.saveAudios(data.audios);
 
-        return {
-          gallery: data.gallery,
-          letters: data.letters,
-          notes: data.notes,
-          audios: data.audios,
-        };
+          return {
+            gallery: data.gallery && data.gallery.length > 0 ? data.gallery : this.getGallery(),
+            letters: data.letters && data.letters.length > 0 ? data.letters : this.getLetters(),
+            notes: data.notes && data.notes.length > 0 ? data.notes : this.getNotes(),
+            audios: data.audios && data.audios.length > 0 ? data.audios : this.getAudios(),
+          };
+        }
       }
     } catch (e) {
       console.warn('API sync fallback to localStorage:', e);
@@ -266,13 +271,13 @@ class StorageManager {
     this.saveGallery(items);
 
     try {
-      await fetch('/api/gallery', {
+      await fetch('/api/data', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(item),
+        body: JSON.stringify({ table: 'gallery', data: item }),
       });
     } catch (err) {
-      console.warn('API gallery insert failed:', err);
+      console.warn('API gallery insert fallback:', err);
     }
   }
 
@@ -281,9 +286,9 @@ class StorageManager {
     this.saveGallery(items);
 
     try {
-      await fetch(`/api/gallery/${id}`, { method: 'DELETE' });
+      await fetch(`/api/data?table=gallery&id=${id}`, { method: 'DELETE' });
     } catch (err) {
-      console.warn('API gallery delete failed:', err);
+      console.warn('API gallery delete fallback:', err);
     }
   }
 
@@ -292,13 +297,13 @@ class StorageManager {
     this.saveGallery(items);
 
     try {
-      await fetch('/api/gallery', {
+      await fetch('/api/data', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(item),
+        body: JSON.stringify({ table: 'gallery', data: item }),
       });
     } catch (err) {
-      console.warn('API gallery update failed:', err);
+      console.warn('API gallery update fallback:', err);
     }
   }
 
@@ -325,13 +330,13 @@ class StorageManager {
     this.saveLetters(items);
 
     try {
-      await fetch('/api/letters', {
+      await fetch('/api/data', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(letter),
+        body: JSON.stringify({ table: 'letters', data: letter }),
       });
     } catch (err) {
-      console.warn('API letter insert failed:', err);
+      console.warn('API letter insert fallback:', err);
     }
   }
 
@@ -340,9 +345,9 @@ class StorageManager {
     this.saveLetters(items);
 
     try {
-      await fetch(`/api/letters/${id}`, { method: 'DELETE' });
+      await fetch(`/api/data?table=letters&id=${id}`, { method: 'DELETE' });
     } catch (err) {
-      console.warn('API letter delete failed:', err);
+      console.warn('API letter delete fallback:', err);
     }
   }
 
@@ -351,13 +356,13 @@ class StorageManager {
     this.saveLetters(items);
 
     try {
-      await fetch('/api/letters', {
+      await fetch('/api/data', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(letter),
+        body: JSON.stringify({ table: 'letters', data: letter }),
       });
     } catch (err) {
-      console.warn('API letter update failed:', err);
+      console.warn('API letter update fallback:', err);
     }
   }
 
@@ -384,13 +389,13 @@ class StorageManager {
     this.saveNotes(items);
 
     try {
-      await fetch('/api/notes', {
+      await fetch('/api/data', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(note),
+        body: JSON.stringify({ table: 'notes', data: note }),
       });
     } catch (err) {
-      console.warn('API note insert failed:', err);
+      console.warn('API note insert fallback:', err);
     }
   }
 
@@ -399,9 +404,9 @@ class StorageManager {
     this.saveNotes(items);
 
     try {
-      await fetch(`/api/notes/${id}`, { method: 'DELETE' });
+      await fetch(`/api/data?table=notes&id=${id}`, { method: 'DELETE' });
     } catch (err) {
-      console.warn('API note delete failed:', err);
+      console.warn('API note delete fallback:', err);
     }
   }
 
@@ -410,13 +415,13 @@ class StorageManager {
     this.saveNotes(items);
 
     try {
-      await fetch('/api/notes', {
+      await fetch('/api/data', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(note),
+        body: JSON.stringify({ table: 'notes', data: note }),
       });
     } catch (err) {
-      console.warn('API note update failed:', err);
+      console.warn('API note update fallback:', err);
     }
   }
 
@@ -443,13 +448,13 @@ class StorageManager {
     this.saveAudios(items);
 
     try {
-      await fetch('/api/audios', {
+      await fetch('/api/data', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(audio),
+        body: JSON.stringify({ table: 'audios', data: audio }),
       });
     } catch (err) {
-      console.warn('API audio insert failed:', err);
+      console.warn('API audio insert fallback:', err);
     }
   }
 
@@ -458,9 +463,9 @@ class StorageManager {
     this.saveAudios(items);
 
     try {
-      await fetch(`/api/audios/${id}`, { method: 'DELETE' });
+      await fetch(`/api/data?table=audios&id=${id}`, { method: 'DELETE' });
     } catch (err) {
-      console.warn('API audio delete failed:', err);
+      console.warn('API audio delete fallback:', err);
     }
   }
 
