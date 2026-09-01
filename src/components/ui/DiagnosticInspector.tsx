@@ -1,14 +1,6 @@
-import React, { useState } from "react";
-import {
-  Bug,
-  Copy,
-  Check,
-  ChevronDown,
-  ChevronUp,
-  AlertCircle,
-  Sparkles,
-} from "lucide-react";
-import { DebugErrorLog } from "../../lib/vercelClient";
+import React, { useState } from 'react';
+import { Bug, Copy, Check, ChevronDown, ChevronUp, AlertCircle, Sparkles } from 'lucide-react';
+import { DebugErrorLog } from '../../lib/vercelClient';
 
 interface DiagnosticInspectorProps {
   debugError?: DebugErrorLog | null;
@@ -25,12 +17,10 @@ interface DiagnosticInspectorProps {
 export const DiagnosticInspector: React.FC<DiagnosticInspectorProps> = ({
   debugError,
   lastSuccessLog,
-  className = "",
+  className = '',
   defaultExpanded = false,
 }) => {
-  const [isExpanded, setIsExpanded] = useState(
-    defaultExpanded || Boolean(debugError),
-  );
+  const [isExpanded, setIsExpanded] = useState(defaultExpanded || Boolean(debugError));
   const [copied, setCopied] = useState(false);
 
   if (!debugError && !lastSuccessLog) {
@@ -55,8 +45,8 @@ export const DiagnosticInspector: React.FC<DiagnosticInspectorProps> = ({
     <div
       className={`rounded-xl border transition-all text-xs overflow-hidden ${
         debugError
-          ? "bg-red-950/40 border-red-500/30 text-red-200"
-          : "bg-slate-900/60 border-white/10 text-slate-300"
+          ? 'bg-red-950/40 border-red-500/30 text-red-200'
+          : 'bg-slate-900/60 border-white/10 text-slate-300'
       } ${className}`}
     >
       {/* Header bar */}
@@ -71,9 +61,7 @@ export const DiagnosticInspector: React.FC<DiagnosticInspectorProps> = ({
             <Bug className="w-4 h-4 text-pink-400 shrink-0" />
           )}
           <span className="font-semibold text-slate-200">
-            {debugError
-              ? "Live Error Diagnostics & Inspector"
-              : "System Diagnostic Log"}
+            {debugError ? 'Live Error Diagnostics & Inspector' : 'System Diagnostic Log'}
           </span>
           {debugError?.httpStatus && (
             <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-red-500/20 text-red-300 border border-red-500/30">
@@ -82,10 +70,7 @@ export const DiagnosticInspector: React.FC<DiagnosticInspectorProps> = ({
           )}
           {lastSuccessLog && !debugError && (
             <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-              OK 200{" "}
-              {lastSuccessLog.durationMs
-                ? `(${lastSuccessLog.durationMs}ms)`
-                : ""}
+              OK 200 {lastSuccessLog.durationMs ? `(${lastSuccessLog.durationMs}ms)` : ''}
             </span>
           )}
         </div>
@@ -112,11 +97,7 @@ export const DiagnosticInspector: React.FC<DiagnosticInspectorProps> = ({
               </>
             )}
           </button>
-          {isExpanded ? (
-            <ChevronUp className="w-4 h-4 text-slate-400" />
-          ) : (
-            <ChevronDown className="w-4 h-4 text-slate-400" />
-          )}
+          {isExpanded ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
         </div>
       </div>
 
@@ -130,9 +111,7 @@ export const DiagnosticInspector: React.FC<DiagnosticInspectorProps> = ({
                   Error Message & Endpoint:
                 </div>
                 <div className="p-2 rounded bg-red-900/30 border border-red-500/30 text-red-200 font-sans break-words">
-                  <span className="font-bold text-red-300 font-mono">
-                    [{debugError.endpoint}]{" "}
-                  </span>
+                  <span className="font-bold text-red-300 font-mono">[{debugError.endpoint}] </span>
                   {debugError.message}
                 </div>
               </div>

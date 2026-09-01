@@ -21,10 +21,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
 
     setTimeout(() => {
       // Hardcoded password verification
-      if (password === 'bagas ganteng banget') {
+      if (password === 'saya123') {
         onLoginSuccess();
       } else {
-        setError('Incorrect password. Tanya si bagas yaa 🤍');
+        setError('Incorrect password. (Hint: saya123)');
         setIsLoading(false);
       }
     }, 450);
@@ -74,6 +74,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                 <span className="flex items-center gap-1.5">
                   <Lock className="w-3.5 h-3.5 text-pink-400" /> Enter Passcode
                 </span>
+                <span className="text-[10px] text-pink-300/70 font-normal">Passcode: saya123</span>
               </label>
 
               <div className="relative">
@@ -130,11 +131,12 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
             <button
               type="button"
               onClick={() => {
-                setPassword('bagas ganteng banget');
+                setPassword('saya123');
                 setError('');
               }}
               className="text-xs text-pink-300/80 hover:text-pink-200 hover:underline cursor-pointer flex items-center gap-1"
             >
+              <span>Auto-fill password (saya123)</span>
             </button>
           </div>
         </GlassCard>
