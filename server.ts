@@ -5,13 +5,20 @@ import { put } from '@vercel/blob';
 import { sql } from '@vercel/postgres';
 import { createServer as createViteServer } from 'vite';
 
-// Configure multer memory storage for handling file uploads up to 500MB (for videos/audio/photos)
+const app = express();
+const PORT = 3000;
+
+// Configure multer memory storage for handling file uploads up to 500MB
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
     fileSize: 500 * 1024 * 1024, // 500 MB
   },
 });
+
+// JSON and URL-encoded body parser
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // In-Memory Fallback State (when Postgres / Blob is running in local dev or without credentials)
 let fallbackGallery: any[] = [
@@ -141,490 +148,499 @@ let fallbackAudios: any[] = [
   }
 ];
 
-async function startServer() {
-  const app = express();
-  const PORT = 3000;
+// Helper to check credentials
+const hasBlobToken = () => Boolean(process.env.BLOB_READ_WRITE_TOKEN);
+const hasPostgres = () => Boolean(process.env.POSTGRES_URL || process.env.POSTGRES_PRISMA_URL);
 
-  // JSON and URL-encoded body parser
-  app.use(express.json({ limit: '50mb' }));
-  app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+// Auto-migrate tables if Postgres is configured
+let tablesInitialized = false;
+async function ensureTables() {
+  if (tablesInitialized || !hasPostgres()) return;
+  try {
+    await sql`
+      CREATE TABLE IF NOT EXISTS gallery (
+        id TEXT PRIMARY KEY,
+        title VARCHAR(255) NOT NULL,
+        description TEXT,
+        media_type VARCHAR(20) NOT NULL,
+        url TEXT NOT NULL,
+        thumbnail_url TEXT,
+        author VARCHAR(50) NOT NULL,
+        category VARCHAR(50) DEFAULT 'All',
+        date VARCHAR(50) NOT NULL,
+        location VARCHAR(255),
+        is_favorite BOOLEAN DEFAULT FALSE,
+        aspect_ratio NUMERIC DEFAULT 1.33,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+    `;
+    await sql`
+      CREATE TABLE IF NOT EXISTS letters (
+        id TEXT PRIMARY KEY,
+        title VARCHAR(255) NOT NULL,
+        content TEXT NOT NULL,
+        sender VARCHAR(50) NOT NULL,
+        recipient VARCHAR(50) NOT NULL,
+        date VARCHAR(50) NOT NULL,
+        stamp_emoji VARCHAR(20) DEFAULT '💌',
+        is_read BOOLEAN DEFAULT FALSE,
+        paper_color VARCHAR(30) DEFAULT 'rose',
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+    `;
+    await sql`
+      CREATE TABLE IF NOT EXISTS notes (
+        id TEXT PRIMARY KEY,
+        text TEXT NOT NULL,
+        author VARCHAR(50) NOT NULL,
+        color VARCHAR(30) DEFAULT 'pink',
+        date VARCHAR(50) NOT NULL,
+        is_pinned BOOLEAN DEFAULT FALSE,
+        emoji VARCHAR(20) DEFAULT '✨',
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+    `;
+    await sql`
+      CREATE TABLE IF NOT EXISTS audios (
+        id TEXT PRIMARY KEY,
+        title VARCHAR(255) NOT NULL,
+        artist VARCHAR(100),
+        url TEXT NOT NULL,
+        duration VARCHAR(20) DEFAULT '0:00',
+        author VARCHAR(50) NOT NULL,
+        type VARCHAR(30) DEFAULT 'song',
+        date VARCHAR(50) NOT NULL,
+        cover_url TEXT,
+        description TEXT,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+    `;
+    tablesInitialized = true;
+  } catch (err: any) {
+    console.warn('Postgres table auto-creation info:', err.message);
+  }
+}
 
-  const hasBlobToken = Boolean(process.env.BLOB_READ_WRITE_TOKEN);
-  const hasPostgres = Boolean(process.env.POSTGRES_URL || process.env.POSTGRES_PRISMA_URL);
+// -------------------------------------------------------------
+// API Endpoints
+// -------------------------------------------------------------
 
-  // Initialize Postgres tables if database URL is provided
-  if (hasPostgres) {
+// 1. Health & Storage Status
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    hasBlobToken: hasBlobToken(),
+    hasPostgres: hasPostgres(),
+    storageType: hasBlobToken() && hasPostgres() ? 'Vercel Native (Blob + Postgres)' : 'Persistent Storage',
+  });
+});
+
+// 2. Fetch All Data on Startup / Reload
+app.get('/api/all-data', async (req, res) => {
+  try {
+    if (hasPostgres()) {
+      await ensureTables();
+      try {
+        const [galRes, letRes, noteRes, audRes] = await Promise.all([
+          sql`SELECT id, title, description, media_type AS "mediaType", url, thumbnail_url AS "thumbnailUrl", author, category, date, location, is_favorite AS "isFavorite", aspect_ratio AS "aspectRatio", created_at AS "createdAt" FROM gallery ORDER BY created_at DESC;`,
+          sql`SELECT id, title, content, sender, recipient, date, stamp_emoji AS "stampEmoji", is_read AS "isRead", paper_color AS "paperColor", created_at AS "createdAt" FROM letters ORDER BY created_at DESC;`,
+          sql`SELECT id, text, author, color, date, is_pinned AS "isPinned", emoji, created_at AS "createdAt" FROM notes ORDER BY created_at DESC;`,
+          sql`SELECT id, title, artist, url, duration, author, type, date, cover_url AS "coverUrl", description, created_at AS "createdAt" FROM audios ORDER BY created_at DESC;`,
+        ]);
+
+        return res.json({
+          success: true,
+          gallery: galRes.rows.length > 0 ? galRes.rows : fallbackGallery,
+          letters: letRes.rows.length > 0 ? letRes.rows : fallbackLetters,
+          notes: noteRes.rows.length > 0 ? noteRes.rows : fallbackNotes,
+          audios: audRes.rows.length > 0 ? audRes.rows : fallbackAudios,
+        });
+      } catch (dbErr: any) {
+        console.warn('Postgres query error, falling back to memory store:', dbErr.message);
+      }
+    }
+
+    return res.json({
+      success: true,
+      gallery: fallbackGallery,
+      letters: fallbackLetters,
+      notes: fallbackNotes,
+      audios: fallbackAudios,
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 3. Vercel Blob File Upload Endpoint
+app.post('/api/upload', upload.single('file'), async (req, res) => {
+  try {
+    const file = req.file;
+    const author = req.body?.author || 'Bagas';
+    const category = req.body?.category || 'All';
+
+    if (!file && !req.body?.dataUrl) {
+      return res.status(400).json({ success: false, error: 'No file provided for upload.' });
+    }
+
+    // Determine category folder
+    let folder = 'photos';
+    let mediaType: 'photo' | 'video' | 'audio' = 'photo';
+
+    if (file?.mimetype?.startsWith('video/')) {
+      folder = 'videos';
+      mediaType = 'video';
+    } else if (file?.mimetype?.startsWith('audio/')) {
+      folder = 'audio';
+      mediaType = 'audio';
+    }
+
+    const cleanFileName = file ? file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_') : `media_${Date.now()}`;
+    const pathname = `${folder}/${Date.now()}-${cleanFileName}`;
+
+    // If Vercel Blob token is configured, use @vercel/blob
+    if (hasBlobToken() && file) {
+      try {
+        const blob = await put(pathname, file.buffer, {
+          access: 'public',
+          contentType: file.mimetype,
+          addRandomSuffix: true,
+        });
+
+        return res.json({
+          success: true,
+          url: blob.url,
+          downloadUrl: blob.downloadUrl || blob.url,
+          thumbnailUrl: mediaType === 'photo' ? blob.url : undefined,
+          pathname: blob.pathname,
+          mediaType,
+          author,
+          category,
+          storage: 'vercel_blob',
+        });
+      } catch (blobErr: any) {
+        console.warn('Vercel Blob put error, using inline fallback:', blobErr.message);
+      }
+    }
+
+    // High-performance fallback: Data URL
+    let viewUrl = '';
+    if (file) {
+      const base64Data = file.buffer.toString('base64');
+      viewUrl = `data:${file.mimetype};base64,${base64Data}`;
+    } else if (req.body?.dataUrl) {
+      viewUrl = req.body.dataUrl;
+    }
+
+    return res.json({
+      success: true,
+      url: viewUrl,
+      downloadUrl: viewUrl,
+      thumbnailUrl: mediaType === 'photo' ? viewUrl : undefined,
+      pathname,
+      mediaType,
+      author,
+      category,
+      storage: 'fallback_data_url',
+    });
+  } catch (err: any) {
+    console.error('Upload Error:', err);
+    res.status(500).json({ success: false, error: err.message || 'File upload failed' });
+  }
+});
+
+// 4. Gallery Endpoints
+app.get('/api/gallery', async (req, res) => {
+  if (hasPostgres()) {
+    await ensureTables();
     try {
-      await sql`
-        CREATE TABLE IF NOT EXISTS gallery (
-          id TEXT PRIMARY KEY,
-          title VARCHAR(255) NOT NULL,
-          description TEXT,
-          media_type VARCHAR(20) NOT NULL,
-          url TEXT NOT NULL,
-          thumbnail_url TEXT,
-          author VARCHAR(50) NOT NULL,
-          category VARCHAR(50) DEFAULT 'All',
-          date VARCHAR(50) NOT NULL,
-          location VARCHAR(255),
-          is_favorite BOOLEAN DEFAULT FALSE,
-          aspect_ratio NUMERIC DEFAULT 1.33,
-          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-        );
+      const { rows } = await sql`
+        SELECT id, title, description, media_type AS "mediaType", url, thumbnail_url AS "thumbnailUrl", author, category, date, location, is_favorite AS "isFavorite", aspect_ratio AS "aspectRatio", created_at AS "createdAt"
+        FROM gallery ORDER BY created_at DESC;
       `;
-      await sql`
-        CREATE TABLE IF NOT EXISTS letters (
-          id TEXT PRIMARY KEY,
-          title VARCHAR(255) NOT NULL,
-          content TEXT NOT NULL,
-          sender VARCHAR(50) NOT NULL,
-          recipient VARCHAR(50) NOT NULL,
-          date VARCHAR(50) NOT NULL,
-          stamp_emoji VARCHAR(20) DEFAULT '💌',
-          is_read BOOLEAN DEFAULT FALSE,
-          paper_color VARCHAR(30) DEFAULT 'rose',
-          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-        );
-      `;
-      await sql`
-        CREATE TABLE IF NOT EXISTS notes (
-          id TEXT PRIMARY KEY,
-          text TEXT NOT NULL,
-          author VARCHAR(50) NOT NULL,
-          color VARCHAR(30) DEFAULT 'pink',
-          date VARCHAR(50) NOT NULL,
-          is_pinned BOOLEAN DEFAULT FALSE,
-          emoji VARCHAR(20) DEFAULT '✨',
-          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-        );
-      `;
-      await sql`
-        CREATE TABLE IF NOT EXISTS audios (
-          id TEXT PRIMARY KEY,
-          title VARCHAR(255) NOT NULL,
-          artist VARCHAR(100),
-          url TEXT NOT NULL,
-          duration VARCHAR(20) DEFAULT '0:00',
-          author VARCHAR(50) NOT NULL,
-          type VARCHAR(30) DEFAULT 'song',
-          date VARCHAR(50) NOT NULL,
-          cover_url TEXT,
-          description TEXT,
-          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-        );
-      `;
-      console.log('Vercel Postgres tables initialized successfully.');
-    } catch (err: any) {
-      console.warn('Vercel Postgres auto-migration skipped or offline, using persistent memory fallback:', err.message);
+      return res.json({ success: true, items: rows.length > 0 ? rows : fallbackGallery });
+    } catch (e: any) {
+      console.warn('Postgres query error:', e.message);
+    }
+  }
+  res.json({ success: true, items: fallbackGallery });
+});
+
+app.post('/api/gallery', async (req, res) => {
+  try {
+    const item = req.body;
+    const id = item.id || `gal_${Date.now()}`;
+    const title = item.title || 'Untitled Memory';
+    const description = item.description || '';
+    const mediaType = item.mediaType || 'photo';
+    const url = item.url;
+    const thumbnailUrl = item.thumbnailUrl || url;
+    const author = item.author || 'Bagas';
+    const category = item.category || 'All';
+    const date = item.date || new Date().toISOString().split('T')[0];
+    const location = item.location || '';
+    const isFavorite = Boolean(item.isFavorite);
+    const aspectRatio = item.aspectRatio || 1.33;
+    const createdAt = item.createdAt || new Date().toISOString();
+
+    const newItem = { id, title, description, mediaType, url, thumbnailUrl, author, category, date, location, isFavorite, aspectRatio, createdAt };
+
+    // Update in-memory fallback
+    fallbackGallery = [newItem, ...fallbackGallery.filter(g => g.id !== id)];
+
+    if (hasPostgres()) {
+      await ensureTables();
+      try {
+        await sql`
+          INSERT INTO gallery (id, title, description, media_type, url, thumbnail_url, author, category, date, location, is_favorite, aspect_ratio, created_at)
+          VALUES (${id}, ${title}, ${description}, ${mediaType}, ${url}, ${thumbnailUrl}, ${author}, ${category}, ${date}, ${location}, ${isFavorite}, ${aspectRatio}, ${createdAt})
+          ON CONFLICT (id) DO UPDATE SET
+            title = EXCLUDED.title,
+            description = EXCLUDED.description,
+            is_favorite = EXCLUDED.is_favorite;
+        `;
+      } catch (e: any) {
+        console.warn('Postgres gallery insert error:', e.message);
+      }
+    }
+
+    res.json({ success: true, item: newItem });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.delete('/api/gallery/:id', async (req, res) => {
+  const { id } = req.params;
+  fallbackGallery = fallbackGallery.filter(g => g.id !== id);
+
+  if (hasPostgres()) {
+    try {
+      await sql`DELETE FROM gallery WHERE id = ${id};`;
+    } catch (e: any) {
+      console.warn('Postgres delete error:', e.message);
     }
   }
 
-  // -------------------------------------------------------------
-  // API Endpoints
-  // -------------------------------------------------------------
+  res.json({ success: true });
+});
 
-  // 1. Health & Storage Status
-  app.get('/api/health', (req, res) => {
-    res.json({
-      status: 'ok',
-      timestamp: new Date().toISOString(),
-      hasBlobToken,
-      hasPostgres,
-      storageType: hasBlobToken && hasPostgres ? 'Vercel Native (Blob + Postgres)' : 'Persistent Local & Server Storage',
-    });
-  });
-
-  // 2. Fetch All Data on Startup / Reload
-  app.get('/api/all-data', async (req, res) => {
+// 5. Letters Endpoints
+app.get('/api/letters', async (req, res) => {
+  if (hasPostgres()) {
+    await ensureTables();
     try {
-      if (hasPostgres) {
-        try {
-          const [galRes, letRes, noteRes, audRes] = await Promise.all([
-            sql`SELECT id, title, description, media_type AS "mediaType", url, thumbnail_url AS "thumbnailUrl", author, category, date, location, is_favorite AS "isFavorite", aspect_ratio AS "aspectRatio", created_at AS "createdAt" FROM gallery ORDER BY created_at DESC;`,
-            sql`SELECT id, title, content, sender, recipient, date, stamp_emoji AS "stampEmoji", is_read AS "isRead", paper_color AS "paperColor", created_at AS "createdAt" FROM letters ORDER BY created_at DESC;`,
-            sql`SELECT id, text, author, color, date, is_pinned AS "isPinned", emoji, created_at AS "createdAt" FROM notes ORDER BY created_at DESC;`,
-            sql`SELECT id, title, artist, url, duration, author, type, date, cover_url AS "coverUrl", description, created_at AS "createdAt" FROM audios ORDER BY created_at DESC;`,
-          ]);
-
-          return res.json({
-            success: true,
-            gallery: galRes.rows.length > 0 ? galRes.rows : fallbackGallery,
-            letters: letRes.rows.length > 0 ? letRes.rows : fallbackLetters,
-            notes: noteRes.rows.length > 0 ? noteRes.rows : fallbackNotes,
-            audios: audRes.rows.length > 0 ? audRes.rows : fallbackAudios,
-          });
-        } catch (dbErr) {
-          console.warn('Postgres query error, falling back to memory store:', dbErr);
-        }
-      }
-
-      return res.json({
-        success: true,
-        gallery: fallbackGallery,
-        letters: fallbackLetters,
-        notes: fallbackNotes,
-        audios: fallbackAudios,
-      });
-    } catch (err: any) {
-      res.status(500).json({ success: false, error: err.message });
+      const { rows } = await sql`
+        SELECT id, title, content, sender, recipient, date, stamp_emoji AS "stampEmoji", is_read AS "isRead", paper_color AS "paperColor", created_at AS "createdAt"
+        FROM letters ORDER BY created_at DESC;
+      `;
+      return res.json({ success: true, items: rows.length > 0 ? rows : fallbackLetters });
+    } catch (e: any) {
+      console.warn('Postgres query error:', e.message);
     }
-  });
+  }
+  res.json({ success: true, items: fallbackLetters });
+});
 
-  // 3. Vercel Blob File Upload Endpoint
-  app.post('/api/upload', upload.single('file'), async (req, res) => {
-    try {
-      const file = req.file;
-      const author = req.body?.author || 'Bagas';
-      const category = req.body?.category || 'All';
+app.post('/api/letters', async (req, res) => {
+  try {
+    const letter = req.body;
+    const id = letter.id || `let_${Date.now()}`;
+    const title = letter.title || 'Untitled Letter';
+    const content = letter.content || '';
+    const sender = letter.sender || 'Bagas';
+    const recipient = letter.recipient || 'Anita';
+    const date = letter.date || new Date().toISOString().split('T')[0];
+    const stampEmoji = letter.stampEmoji || '💌';
+    const isRead = Boolean(letter.isRead);
+    const paperColor = letter.paperColor || 'rose';
+    const createdAt = letter.createdAt || new Date().toISOString();
 
-      if (!file && !req.body?.dataUrl) {
-        return res.status(400).json({ success: false, error: 'No file provided for upload.' });
-      }
+    const newLetter = { id, title, content, sender, recipient, date, stampEmoji, isRead, paperColor, createdAt };
+    fallbackLetters = [newLetter, ...fallbackLetters.filter(l => l.id !== id)];
 
-      // Determine category folder
-      let folder = 'photos';
-      let mediaType: 'photo' | 'video' | 'audio' = 'photo';
-
-      if (file?.mimetype?.startsWith('video/')) {
-        folder = 'videos';
-        mediaType = 'video';
-      } else if (file?.mimetype?.startsWith('audio/')) {
-        folder = 'audio';
-        mediaType = 'audio';
-      }
-
-      const cleanFileName = file ? file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_') : `media_${Date.now()}`;
-      const pathname = `${folder}/${Date.now()}-${cleanFileName}`;
-
-      // If Vercel Blob token is configured, use @vercel/blob
-      if (hasBlobToken && file) {
-        try {
-          const blob = await put(pathname, file.buffer, {
-            access: 'public',
-            contentType: file.mimetype,
-          });
-
-          return res.json({
-            success: true,
-            url: blob.url,
-            downloadUrl: blob.downloadUrl || blob.url,
-            thumbnailUrl: mediaType === 'photo' ? blob.url : undefined,
-            pathname: blob.pathname,
-            mediaType,
-            author,
-            category,
-            storage: 'vercel_blob',
-          });
-        } catch (blobErr: any) {
-          console.warn('Vercel Blob put error, using inline fallback:', blobErr.message);
-        }
-      }
-
-      // High-performance fallback: Data URL
-      let viewUrl = '';
-      if (file) {
-        const base64Data = file.buffer.toString('base64');
-        viewUrl = `data:${file.mimetype};base64,${base64Data}`;
-      } else if (req.body?.dataUrl) {
-        viewUrl = req.body.dataUrl;
-      }
-
-      return res.json({
-        success: true,
-        url: viewUrl,
-        downloadUrl: viewUrl,
-        thumbnailUrl: mediaType === 'photo' ? viewUrl : undefined,
-        pathname,
-        mediaType,
-        author,
-        category,
-        storage: 'fallback_data_url',
-      });
-    } catch (err: any) {
-      console.error('Upload Error:', err);
-      res.status(500).json({ success: false, error: err.message || 'File upload failed' });
-    }
-  });
-
-  // 4. Gallery Endpoints
-  app.get('/api/gallery', async (req, res) => {
-    if (hasPostgres) {
+    if (hasPostgres()) {
+      await ensureTables();
       try {
-        const { rows } = await sql`
-          SELECT id, title, description, media_type AS "mediaType", url, thumbnail_url AS "thumbnailUrl", author, category, date, location, is_favorite AS "isFavorite", aspect_ratio AS "aspectRatio", created_at AS "createdAt"
-          FROM gallery ORDER BY created_at DESC;
+        await sql`
+          INSERT INTO letters (id, title, content, sender, recipient, date, stamp_emoji, is_read, paper_color, created_at)
+          VALUES (${id}, ${title}, ${content}, ${sender}, ${recipient}, ${date}, ${stampEmoji}, ${isRead}, ${paperColor}, ${createdAt})
+          ON CONFLICT (id) DO UPDATE SET
+            title = EXCLUDED.title,
+            content = EXCLUDED.content,
+            is_read = EXCLUDED.is_read;
         `;
-        return res.json({ success: true, items: rows.length > 0 ? rows : fallbackGallery });
-      } catch (e) {
-        console.warn('Postgres query error:', e);
+      } catch (e: any) {
+        console.warn('Postgres letters insert error:', e.message);
       }
     }
-    res.json({ success: true, items: fallbackGallery });
-  });
 
-  app.post('/api/gallery', async (req, res) => {
+    res.json({ success: true, item: newLetter });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.delete('/api/letters/:id', async (req, res) => {
+  const { id } = req.params;
+  fallbackLetters = fallbackLetters.filter(l => l.id !== id);
+
+  if (hasPostgres()) {
     try {
-      const item = req.body;
-      const id = item.id || `gal_${Date.now()}`;
-      const title = item.title || 'Untitled Memory';
-      const description = item.description || '';
-      const mediaType = item.mediaType || 'photo';
-      const url = item.url;
-      const thumbnailUrl = item.thumbnailUrl || url;
-      const author = item.author || 'Bagas';
-      const category = item.category || 'All';
-      const date = item.date || new Date().toISOString().split('T')[0];
-      const location = item.location || '';
-      const isFavorite = Boolean(item.isFavorite);
-      const aspectRatio = item.aspectRatio || 1.33;
-      const createdAt = item.createdAt || new Date().toISOString();
-
-      const newItem = { id, title, description, mediaType, url, thumbnailUrl, author, category, date, location, isFavorite, aspectRatio, createdAt };
-
-      // Update in-memory fallback
-      fallbackGallery = [newItem, ...fallbackGallery.filter(g => g.id !== id)];
-
-      if (hasPostgres) {
-        try {
-          await sql`
-            INSERT INTO gallery (id, title, description, media_type, url, thumbnail_url, author, category, date, location, is_favorite, aspect_ratio, created_at)
-            VALUES (${id}, ${title}, ${description}, ${mediaType}, ${url}, ${thumbnailUrl}, ${author}, ${category}, ${date}, ${location}, ${isFavorite}, ${aspectRatio}, ${createdAt})
-            ON CONFLICT (id) DO UPDATE SET
-              title = EXCLUDED.title,
-              description = EXCLUDED.description,
-              is_favorite = EXCLUDED.is_favorite;
-          `;
-        } catch (e) {
-          console.warn('Postgres gallery insert error:', e);
-        }
-      }
-
-      res.json({ success: true, item: newItem });
-    } catch (err: any) {
-      res.status(500).json({ success: false, error: err.message });
+      await sql`DELETE FROM letters WHERE id = ${id};`;
+    } catch (e: any) {
+      console.warn('Postgres delete error:', e.message);
     }
-  });
+  }
 
-  app.delete('/api/gallery/:id', async (req, res) => {
-    const { id } = req.params;
-    fallbackGallery = fallbackGallery.filter(g => g.id !== id);
+  res.json({ success: true });
+});
 
-    if (hasPostgres) {
-      try {
-        await sql`DELETE FROM gallery WHERE id = ${id};`;
-      } catch (e) {
-        console.warn('Postgres delete error:', e);
-      }
+// 6. Notes Endpoints
+app.get('/api/notes', async (req, res) => {
+  if (hasPostgres()) {
+    await ensureTables();
+    try {
+      const { rows } = await sql`
+        SELECT id, text, author, color, date, is_pinned AS "isPinned", emoji, created_at AS "createdAt"
+        FROM notes ORDER BY created_at DESC;
+      `;
+      return res.json({ success: true, items: rows.length > 0 ? rows : fallbackNotes });
+    } catch (e: any) {
+      console.warn('Postgres notes query error:', e.message);
     }
+  }
+  res.json({ success: true, items: fallbackNotes });
+});
 
-    res.json({ success: true });
-  });
+app.post('/api/notes', async (req, res) => {
+  try {
+    const note = req.body;
+    const id = note.id || `note_${Date.now()}`;
+    const text = note.text || '';
+    const author = note.author || 'Anita';
+    const color = note.color || 'pink';
+    const date = note.date || new Date().toISOString().split('T')[0];
+    const isPinned = Boolean(note.isPinned);
+    const emoji = note.emoji || '✨';
+    const createdAt = note.createdAt || new Date().toISOString();
 
-  // 5. Letters Endpoints
-  app.get('/api/letters', async (req, res) => {
-    if (hasPostgres) {
+    const newNote = { id, text, author, color, date, isPinned, emoji, createdAt };
+    fallbackNotes = [newNote, ...fallbackNotes.filter(n => n.id !== id)];
+
+    if (hasPostgres()) {
+      await ensureTables();
       try {
-        const { rows } = await sql`
-          SELECT id, title, content, sender, recipient, date, stamp_emoji AS "stampEmoji", is_read AS "isRead", paper_color AS "paperColor", created_at AS "createdAt"
-          FROM letters ORDER BY created_at DESC;
+        await sql`
+          INSERT INTO notes (id, text, author, color, date, is_pinned, emoji, created_at)
+          VALUES (${id}, ${text}, ${author}, ${color}, ${date}, ${isPinned}, ${emoji}, ${createdAt})
+          ON CONFLICT (id) DO UPDATE SET
+            text = EXCLUDED.text,
+            is_pinned = EXCLUDED.is_pinned;
         `;
-        return res.json({ success: true, items: rows.length > 0 ? rows : fallbackLetters });
-      } catch (e) {
-        console.warn('Postgres query error:', e);
+      } catch (e: any) {
+        console.warn('Postgres notes insert error:', e.message);
       }
     }
-    res.json({ success: true, items: fallbackLetters });
-  });
 
-  app.post('/api/letters', async (req, res) => {
+    res.json({ success: true, item: newNote });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.delete('/api/notes/:id', async (req, res) => {
+  const { id } = req.params;
+  fallbackNotes = fallbackNotes.filter(n => n.id !== id);
+
+  if (hasPostgres()) {
     try {
-      const letter = req.body;
-      const id = letter.id || `let_${Date.now()}`;
-      const title = letter.title || 'Untitled Letter';
-      const content = letter.content || '';
-      const sender = letter.sender || 'Bagas';
-      const recipient = letter.recipient || 'Anita';
-      const date = letter.date || new Date().toISOString().split('T')[0];
-      const stampEmoji = letter.stampEmoji || '💌';
-      const isRead = Boolean(letter.isRead);
-      const paperColor = letter.paperColor || 'rose';
-      const createdAt = letter.createdAt || new Date().toISOString();
-
-      const newLetter = { id, title, content, sender, recipient, date, stampEmoji, isRead, paperColor, createdAt };
-      fallbackLetters = [newLetter, ...fallbackLetters.filter(l => l.id !== id)];
-
-      if (hasPostgres) {
-        try {
-          await sql`
-            INSERT INTO letters (id, title, content, sender, recipient, date, stamp_emoji, is_read, paper_color, created_at)
-            VALUES (${id}, ${title}, ${content}, ${sender}, ${recipient}, ${date}, ${stampEmoji}, ${isRead}, ${paperColor}, ${createdAt})
-            ON CONFLICT (id) DO UPDATE SET
-              title = EXCLUDED.title,
-              content = EXCLUDED.content,
-              is_read = EXCLUDED.is_read;
-          `;
-        } catch (e) {
-          console.warn('Postgres letters insert error:', e);
-        }
-      }
-
-      res.json({ success: true, item: newLetter });
-    } catch (err: any) {
-      res.status(500).json({ success: false, error: err.message });
+      await sql`DELETE FROM notes WHERE id = ${id};`;
+    } catch (e: any) {
+      console.warn('Postgres delete error:', e.message);
     }
-  });
+  }
 
-  app.delete('/api/letters/:id', async (req, res) => {
-    const { id } = req.params;
-    fallbackLetters = fallbackLetters.filter(l => l.id !== id);
+  res.json({ success: true });
+});
 
-    if (hasPostgres) {
-      try {
-        await sql`DELETE FROM letters WHERE id = ${id};`;
-      } catch (e) {
-        console.warn('Postgres delete error:', e);
-      }
+// 7. Audio Endpoints
+app.get('/api/audios', async (req, res) => {
+  if (hasPostgres()) {
+    await ensureTables();
+    try {
+      const { rows } = await sql`
+        SELECT id, title, artist, url, duration, author, type, date, cover_url AS "coverUrl", description, created_at AS "createdAt"
+        FROM audios ORDER BY created_at DESC;
+      `;
+      return res.json({ success: true, items: rows.length > 0 ? rows : fallbackAudios });
+    } catch (e: any) {
+      console.warn('Postgres audios query error:', e.message);
     }
+  }
+  res.json({ success: true, items: fallbackAudios });
+});
 
-    res.json({ success: true });
-  });
+app.post('/api/audios', async (req, res) => {
+  try {
+    const audio = req.body;
+    const id = audio.id || `aud_${Date.now()}`;
+    const title = audio.title || 'Untitled Audio';
+    const artist = audio.artist || 'Bagas & Anita';
+    const url = audio.url;
+    const duration = audio.duration || '0:00';
+    const author = audio.author || 'Bagas';
+    const type = audio.type || 'song';
+    const date = audio.date || new Date().toISOString().split('T')[0];
+    const coverUrl = audio.coverUrl || '';
+    const description = audio.description || '';
+    const createdAt = audio.createdAt || new Date().toISOString();
 
-  // 6. Notes Endpoints
-  app.get('/api/notes', async (req, res) => {
-    if (hasPostgres) {
+    const newAudio = { id, title, artist, url, duration, author, type, date, coverUrl, description, createdAt };
+    fallbackAudios = [newAudio, ...fallbackAudios.filter(a => a.id !== id)];
+
+    if (hasPostgres()) {
+      await ensureTables();
       try {
-        const { rows } = await sql`
-          SELECT id, text, author, color, date, is_pinned AS "isPinned", emoji, created_at AS "createdAt"
-          FROM notes ORDER BY created_at DESC;
+        await sql`
+          INSERT INTO audios (id, title, artist, url, duration, author, type, date, cover_url, description, created_at)
+          VALUES (${id}, ${title}, ${artist}, ${url}, ${duration}, ${author}, ${type}, ${date}, ${coverUrl}, ${description}, ${createdAt})
+          ON CONFLICT (id) DO UPDATE SET
+            title = EXCLUDED.title,
+            artist = EXCLUDED.artist;
         `;
-        return res.json({ success: true, items: rows.length > 0 ? rows : fallbackNotes });
-      } catch (e) {
-        console.warn('Postgres notes query error:', e);
+      } catch (e: any) {
+        console.warn('Postgres audios insert error:', e.message);
       }
     }
-    res.json({ success: true, items: fallbackNotes });
-  });
 
-  app.post('/api/notes', async (req, res) => {
+    res.json({ success: true, item: newAudio });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.delete('/api/audios/:id', async (req, res) => {
+  const { id } = req.params;
+  fallbackAudios = fallbackAudios.filter(a => a.id !== id);
+
+  if (hasPostgres()) {
     try {
-      const note = req.body;
-      const id = note.id || `note_${Date.now()}`;
-      const text = note.text || '';
-      const author = note.author || 'Anita';
-      const color = note.color || 'pink';
-      const date = note.date || new Date().toISOString().split('T')[0];
-      const isPinned = Boolean(note.isPinned);
-      const emoji = note.emoji || '✨';
-      const createdAt = note.createdAt || new Date().toISOString();
-
-      const newNote = { id, text, author, color, date, isPinned, emoji, createdAt };
-      fallbackNotes = [newNote, ...fallbackNotes.filter(n => n.id !== id)];
-
-      if (hasPostgres) {
-        try {
-          await sql`
-            INSERT INTO notes (id, text, author, color, date, is_pinned, emoji, created_at)
-            VALUES (${id}, ${text}, ${author}, ${color}, ${date}, ${isPinned}, ${emoji}, ${createdAt})
-            ON CONFLICT (id) DO UPDATE SET
-              text = EXCLUDED.text,
-              is_pinned = EXCLUDED.is_pinned;
-          `;
-        } catch (e) {
-          console.warn('Postgres notes insert error:', e);
-        }
-      }
-
-      res.json({ success: true, item: newNote });
-    } catch (err: any) {
-      res.status(500).json({ success: false, error: err.message });
+      await sql`DELETE FROM audios WHERE id = ${id};`;
+    } catch (e: any) {
+      console.warn('Postgres delete error:', e.message);
     }
-  });
+  }
 
-  app.delete('/api/notes/:id', async (req, res) => {
-    const { id } = req.params;
-    fallbackNotes = fallbackNotes.filter(n => n.id !== id);
+  res.json({ success: true });
+});
 
-    if (hasPostgres) {
-      try {
-        await sql`DELETE FROM notes WHERE id = ${id};`;
-      } catch (e) {
-        console.warn('Postgres delete error:', e);
-      }
-    }
+// Export default app for Vercel Serverless / external runners
+export default app;
 
-    res.json({ success: true });
-  });
-
-  // 7. Audio Endpoints
-  app.get('/api/audios', async (req, res) => {
-    if (hasPostgres) {
-      try {
-        const { rows } = await sql`
-          SELECT id, title, artist, url, duration, author, type, date, cover_url AS "coverUrl", description, created_at AS "createdAt"
-          FROM audios ORDER BY created_at DESC;
-        `;
-        return res.json({ success: true, items: rows.length > 0 ? rows : fallbackAudios });
-      } catch (e) {
-        console.warn('Postgres audios query error:', e);
-      }
-    }
-    res.json({ success: true, items: fallbackAudios });
-  });
-
-  app.post('/api/audios', async (req, res) => {
-    try {
-      const audio = req.body;
-      const id = audio.id || `aud_${Date.now()}`;
-      const title = audio.title || 'Untitled Audio';
-      const artist = audio.artist || 'Bagas & Anita';
-      const url = audio.url;
-      const duration = audio.duration || '0:00';
-      const author = audio.author || 'Bagas';
-      const type = audio.type || 'song';
-      const date = audio.date || new Date().toISOString().split('T')[0];
-      const coverUrl = audio.coverUrl || '';
-      const description = audio.description || '';
-      const createdAt = audio.createdAt || new Date().toISOString();
-
-      const newAudio = { id, title, artist, url, duration, author, type, date, coverUrl, description, createdAt };
-      fallbackAudios = [newAudio, ...fallbackAudios.filter(a => a.id !== id)];
-
-      if (hasPostgres) {
-        try {
-          await sql`
-            INSERT INTO audios (id, title, artist, url, duration, author, type, date, cover_url, description, created_at)
-            VALUES (${id}, ${title}, ${artist}, ${url}, ${duration}, ${author}, ${type}, ${date}, ${coverUrl}, ${description}, ${createdAt})
-            ON CONFLICT (id) DO UPDATE SET
-              title = EXCLUDED.title,
-              artist = EXCLUDED.artist;
-          `;
-        } catch (e) {
-          console.warn('Postgres audios insert error:', e);
-        }
-      }
-
-      res.json({ success: true, item: newAudio });
-    } catch (err: any) {
-      res.status(500).json({ success: false, error: err.message });
-    }
-  });
-
-  app.delete('/api/audios/:id', async (req, res) => {
-    const { id } = req.params;
-    fallbackAudios = fallbackAudios.filter(a => a.id !== id);
-
-    if (hasPostgres) {
-      try {
-        await sql`DELETE FROM audios WHERE id = ${id};`;
-      } catch (e) {
-        console.warn('Postgres delete error:', e);
-      }
-    }
-
-    res.json({ success: true });
-  });
-
-  // Vite middleware for development
+// Start dev or production server if running as standalone process
+export async function startServer() {
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
       server: { middlewareMode: true },
@@ -644,4 +660,7 @@ async function startServer() {
   });
 }
 
-startServer();
+// Only launch standalone server if not in Vercel serverless environment
+if (!process.env.VERCEL) {
+  startServer();
+}
