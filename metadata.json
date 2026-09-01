@@ -1,0 +1,6 @@
+{
+  "name": "Bagas & Anita - Memories",
+  "description": "A romantic glassmorphism memories website for Bagas & Anita featuring photo & video masonry gallery, love letters, notes, audio player, and cloud upload.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
