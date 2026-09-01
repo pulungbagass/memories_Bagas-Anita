@@ -3,7 +3,6 @@ import path from 'path';
 import multer from 'multer';
 import { put } from '@vercel/blob';
 import { sql } from '@vercel/postgres';
-import { createServer as createViteServer } from 'vite';
 
 const app = express();
 const PORT = 3000;
@@ -319,14 +318,17 @@ app.get('/api/all-data', async (req, res) => {
   }
 });
 
-// 3. Vercel Blob File Upload Endpoint
+// 3. Vercel Blob File Upload Endpoint (Supports Base64 JSON and Multipart)
 app.post('/api/upload', upload.single('file'), async (req, res) => {
   try {
     const file = req.file;
     const author = req.body?.author || 'Bagas';
     const category = req.body?.category || 'All';
+    const base64 = req.body?.base64;
+    const contentType = req.body?.contentType || file?.mimetype || 'image/jpeg';
+    const filename = req.body?.filename || file?.originalname;
 
-    if (!file && !req.body?.dataUrl) {
+    if (!file && !base64 && !req.body?.dataUrl) {
       return res.status(400).json({ success: false, error: 'No file provided for upload.' });
     }
 
@@ -334,25 +336,26 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
     let folder = 'photos';
     let mediaType: 'photo' | 'video' | 'audio' = 'photo';
 
-    if (file?.mimetype?.startsWith('video/')) {
+    if (contentType.startsWith('video/')) {
       folder = 'videos';
       mediaType = 'video';
-    } else if (file?.mimetype?.startsWith('audio/')) {
+    } else if (contentType.startsWith('audio/')) {
       folder = 'audio';
       mediaType = 'audio';
     }
 
-    const cleanFileName = file ? file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_') : `media_${Date.now()}`;
+    const cleanFileName = filename ? filename.replace(/[^a-zA-Z0-9.-]/g, '_') : `media_${Date.now()}`;
     const pathname = `${folder}/${Date.now()}-${cleanFileName}`;
 
-    // If Vercel Blob token is configured, use @vercel/blob with explicit token
     const token = getBlobToken();
-    if (file && token) {
+    const buffer = file ? file.buffer : (base64 ? Buffer.from(base64, 'base64') : null);
+
+    if (buffer && token) {
       try {
-        const blob = await put(pathname, file.buffer, {
+        const blob = await put(pathname, buffer, {
           access: 'public',
           token,
-          contentType: file.mimetype,
+          contentType,
           addRandomSuffix: true,
         });
 
@@ -372,11 +375,13 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
       }
     }
 
-    // Reliable fallback: Data URL
+    // Fallback: Data URL
     let viewUrl = '';
-    if (file) {
-      const base64Data = file.buffer.toString('base64');
-      viewUrl = `data:${file.mimetype};base64,${base64Data}`;
+    if (base64) {
+      viewUrl = `data:${contentType};base64,${base64}`;
+    } else if (file) {
+      const b64 = file.buffer.toString('base64');
+      viewUrl = `data:${file.mimetype};base64,${b64}`;
     } else if (req.body?.dataUrl) {
       viewUrl = req.body.dataUrl;
     }
@@ -394,7 +399,6 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
     });
   } catch (err: any) {
     console.error('Upload Error Handler:', err);
-    // Never fail with raw 500 error if fallback can be provided
     res.status(200).json({
       success: true,
       url: 'https://images.unsplash.com/photo-1518199266791-5375a83190b7?auto=format&fit=crop&w=1200&q=80',
@@ -700,6 +704,7 @@ export default app;
 // Start dev or production server if running as standalone process
 export async function startServer() {
   if (process.env.NODE_ENV !== 'production') {
+    const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',

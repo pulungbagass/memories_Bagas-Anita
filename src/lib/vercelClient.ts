@@ -88,9 +88,22 @@ export async function checkVercelServiceStatus(): Promise<VercelServiceStatus> {
   }
 }
 
+// Convert File to Base64
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      const base64 = result.split(',')[1] || result;
+      resolve(base64);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 // Client-side image compressor to prevent exceeding Vercel Serverless Function 4.5MB body limit
 async function compressImageIfNeeded(file: File): Promise<{ file: File; wasCompressed: boolean }> {
-  // Only compress images over 1.5MB
   if (!file.type.startsWith('image/') || file.size <= 1.5 * 1024 * 1024) {
     return { file, wasCompressed: false };
   }
@@ -160,16 +173,22 @@ export async function uploadMediaToVercelBlob(
   const { file: fileToUpload, wasCompressed } = await compressImageIfNeeded(file);
   const uploadedSizeMb = (fileToUpload.size / (1024 * 1024)).toFixed(2);
 
-  const formData = new FormData();
-  formData.append('file', fileToUpload);
-  formData.append('author', author);
-  formData.append('category', category);
+  const base64Data = await fileToBase64(fileToUpload);
 
   let res: Response;
   try {
     res = await fetch('/api/upload', {
       method: 'POST',
-      body: formData,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        filename: fileToUpload.name,
+        contentType: fileToUpload.type,
+        base64: base64Data,
+        author,
+        category,
+      }),
     });
   } catch (networkErr: any) {
     throw {
@@ -203,7 +222,7 @@ export async function uploadMediaToVercelBlob(
     if (res.status === 413) {
       suggestions.push('File is too large for Vercel Serverless (Limit 4.5MB). Try a smaller image or compressed video.');
     } else if (res.status === 500) {
-      suggestions.push('Check if BLOB_READ_WRITE_TOKEN is connected in Vercel Storage tab.');
+      suggestions.push('Check if BLOB_READ_WRITE_TOKEN is connected in Vercel Storage settings.');
       suggestions.push('Verify Vercel Serverless Function logs in Vercel Dashboard > Logs.');
     } else if (res.status === 404) {
       suggestions.push('API route /api/upload was not found. Ensure vercel.json rewrites are deployed.');
