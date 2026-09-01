@@ -157,7 +157,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
               }}
               className="text-xs text-pink-300/80 hover:text-pink-200 hover:underline cursor-pointer flex items-center gap-1"
             >
-              <span>Auto-fill password (bagas ganteng banget)</span>
             </button>
           </div>
         </GlassCard>
