@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { EmoticonParticles } from './components/particles/EmoticonParticles';
 import { FloatingNavBar, NavTab } from './components/ui/FloatingNavBar';
 import { AudioPlayerBar } from './components/ui/AudioPlayerBar';
 import { SettingsModal } from './components/ui/SettingsModal';
@@ -173,24 +172,8 @@ export default function App() {
   };
 
   return (
-    <div className="relative min-h-screen bg-[#0c0c1e] text-white font-sans selection:bg-pink-500/30 selection:text-pink-200 overflow-x-hidden">
-      {/* Immersive UI Background Ambient Glows */}
-      <div className="fixed top-[-10%] left-[-10%] w-[55vw] h-[55vw] max-w-[700px] max-h-[700px] bg-pink-900/20 rounded-full blur-[130px] pointer-events-none z-0" />
-      <div className="fixed bottom-[-10%] right-[-10%] w-[65vw] h-[65vw] max-w-[800px] max-h-[800px] bg-indigo-900/30 rounded-full blur-[160px] pointer-events-none z-0" />
-      <div className="fixed top-[35%] left-[25%] w-[45vw] h-[45vw] max-w-[550px] max-h-[550px] bg-pink-500/10 rounded-full blur-[150px] pointer-events-none z-0 animate-pulse-glow" />
-
-      {/* Immersive Ambient Floating Emoji Elements */}
-      <div className="fixed top-[10%] left-[12%] text-2xl opacity-35 select-none pointer-events-none z-0 animate-float-slow">✨</div>
-      <div className="fixed top-[38%] right-[8%] text-3xl opacity-25 select-none pointer-events-none z-0 animate-float-slow" style={{ animationDelay: '1.5s' }}>🌸</div>
-      <div className="fixed bottom-[18%] left-[7%] text-2xl opacity-35 select-none pointer-events-none z-0 animate-float-slow" style={{ animationDelay: '3s' }}>🌷</div>
-      <div className="fixed top-[72%] left-[22%] text-xl opacity-25 select-none pointer-events-none z-0 animate-float-slow" style={{ animationDelay: '2s' }}>🤍</div>
-      <div className="fixed top-[18%] right-[26%] text-2xl opacity-40 select-none pointer-events-none z-0 animate-float-slow" style={{ animationDelay: '0.8s' }}>💖</div>
-      <div className="fixed bottom-[28%] right-[18%] text-xl opacity-30 select-none pointer-events-none z-0 animate-float-slow" style={{ animationDelay: '2.5s' }}>✨</div>
-
-      {/* 1. Global Interactive Emoticon Particles */}
-      <EmoticonParticles />
-
-      {/* 2. Top-Right Ambient Audio Player Bar (when logged in) */}
+    <div className="relative min-h-screen bg-[#0b0b18] text-white font-sans selection:bg-pink-500/30 selection:text-pink-200 overflow-x-hidden">
+      {/* 1. Top-Right Audio Player Bar (when logged in) */}
       {isAuthenticated && !showWelcome && (
         <AudioPlayerBar
           tracks={audios}

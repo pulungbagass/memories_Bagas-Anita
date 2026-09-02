@@ -19,11 +19,11 @@ export const GlassCard: React.FC<GlassCardProps> = ({
   return (
     <div
       className={`
-        relative rounded-3xl 
-        bg-white/5 backdrop-blur-xl 
-        ${bordered ? 'border border-white/10 shadow-2xl shadow-black/40' : ''}
-        ${hoverEffect ? 'transition-all duration-300 hover:bg-white/[0.08] hover:border-pink-500/30 hover:shadow-pink-500/10 hover:shadow-2xl hover:-translate-y-1' : ''}
-        ${glow ? 'shadow-[0_0_35px_rgba(244,114,182,0.15)] border-pink-500/30' : ''}
+        relative rounded-2xl 
+        bg-[#131328]
+        ${bordered ? 'border border-white/10 shadow-lg shadow-black/30' : ''}
+        ${hoverEffect ? 'transition-all duration-200 hover:bg-[#181832] hover:border-pink-500/30' : ''}
+        ${glow ? 'border-pink-500/40 shadow-md shadow-pink-500/10' : ''}
         ${className}
       `}
       {...props}
@@ -32,4 +32,3 @@ export const GlassCard: React.FC<GlassCardProps> = ({
     </div>
   );
 };
-

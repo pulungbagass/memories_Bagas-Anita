@@ -2,14 +2,16 @@
 
 @layer base {
   body {
-    font-family: 'Plus Jakarta Sans', sans-serif;
-    background-color: #0c0c1e;
-    color: #ffffff;
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    background-color: #0b0b18;
+    color: #f1f5f9;
     overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
   }
 
   .font-serif-display {
-    font-family: 'Playfair Display', serif;
+    font-family: 'Playfair Display', Georgia, serif;
   }
 
   .font-handwriting {
@@ -17,119 +19,86 @@
   }
 }
 
-/* Immersive UI Glassmorphism Presets */
+/* Lightweight & High-Performance UI Classes (Zero Heavy Blur for Mobile Speed) */
 .glass-panel {
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 16px 40px 0 rgba(0, 0, 0, 0.45);
+  background-color: #131327;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
 }
 
 .glass-panel-hover {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
 }
 
 .glass-panel-hover:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.2);
+  background-color: #1a1a34;
+  border-color: rgba(244, 114, 182, 0.3);
   transform: translateY(-2px);
-  box-shadow: 0 20px 45px 0 rgba(244, 114, 182, 0.18);
 }
 
 .glass-card {
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 1.5rem;
+  background-color: #131327;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1.25rem;
 }
 
 .glass-input {
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(16px);
+  background-color: #0e0e1e;
   border: 1px solid rgba(255, 255, 255, 0.12);
-  color: #fff;
-  transition: all 0.2s ease;
+  color: #ffffff;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
 }
 
 .glass-input:focus {
-  background: rgba(255, 255, 255, 0.09);
-  border-color: rgba(244, 114, 182, 0.6);
-  box-shadow: 0 0 0 3px rgba(244, 114, 182, 0.2);
+  background-color: #14142b;
+  border-color: #ec4899;
   outline: none;
 }
 
 .glass-button-primary {
-  background: linear-gradient(135deg, #ec4899, #f43f5e);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  box-shadow: 0 6px 24px rgba(236, 72, 153, 0.35);
-  transition: all 0.25s ease;
+  background-color: #ec4899;
+  background-image: linear-gradient(135deg, #f43f5e 0%, #ec4899 100%);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+  transition: opacity 0.15s ease, transform 0.1s ease;
 }
 
 .glass-button-primary:hover {
-  transform: translateY(-1px) scale(1.02);
-  box-shadow: 0 8px 30px rgba(236, 72, 153, 0.5);
-  filter: brightness(1.08);
+  opacity: 0.95;
+  transform: translateY(-1px);
+}
+
+.glass-button-primary:active {
+  transform: scale(0.98);
 }
 
 .glass-button-secondary {
-  background: rgba(255, 255, 255, 0.07);
-  backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  transition: all 0.2s ease;
+  background-color: #1e1e38;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 
 .glass-button-secondary:hover {
-  background: rgba(255, 255, 255, 0.13);
-  border-color: rgba(255, 255, 255, 0.25);
+  background-color: #28284c;
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
-/* Custom Scrollbar */
+/* Custom Scrollbar - Fast & Simple */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #0c0c1e;
+  background: #0b0b18;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(244, 114, 182, 0.3);
+  background: #334155;
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(244, 114, 182, 0.6);
-}
-
-/* Keyframes for subtle ambient pulse and float */
-@keyframes float-slow {
-  0%, 100% {
-    transform: translateY(0px) rotate(0deg);
-  }
-  50% {
-    transform: translateY(-12px) rotate(3deg);
-  }
-}
-
-.animate-float-slow {
-  animation: float-slow 6s ease-in-out infinite;
-}
-
-@keyframes pulse-glow {
-  0%, 100% {
-    opacity: 0.25;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.45;
-    transform: scale(1.08);
-  }
-}
-
-.animate-pulse-glow {
-  animation: pulse-glow 9s ease-in-out infinite;
+  background: #ec4899;
 }

@@ -1,5 +1,4 @@
 import React from 'react';
-import { motion } from 'motion/react';
 import { 
   Heart, 
   Image as ImageIcon, 
@@ -12,7 +11,6 @@ import {
   Sparkles,
   MapPin,
   Clock,
-  Quote,
   Pin
 } from 'lucide-react';
 import { GlassCard } from '../ui/GlassCard';
@@ -47,23 +45,23 @@ export const HomePage: React.FC<HomePageProps> = ({
   const featuredAudio = audios[0];
 
   return (
-    <div className="space-y-8 pb-32 pt-4 max-w-6xl mx-auto px-4 sm:px-6">
-      {/* Immersive UI Sanctuary Header Banner */}
-      <header className="flex flex-col sm:flex-row justify-between items-start sm:items-end border-b border-white/10 pb-6 gap-4">
+    <div className="space-y-6 pb-28 pt-2 max-w-5xl mx-auto px-4 sm:px-6">
+      {/* Header Banner */}
+      <header className="flex flex-col sm:flex-row justify-between items-start sm:items-end border-b border-slate-800 pb-5 gap-4">
         <div>
-          <p className="text-xs uppercase tracking-[0.4em] text-pink-300/70 font-semibold mb-1">
+          <p className="text-[11px] uppercase tracking-[0.25em] text-pink-400 font-semibold mb-1">
             Our Digital Sanctuary
           </p>
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-light tracking-tight text-white font-serif-display">
+          <h1 className="text-3xl sm:text-4xl font-serif-display text-white tracking-tight">
             Bagas <span className="text-pink-400 font-normal">&</span> Anita
           </h1>
         </div>
-        <div className="flex items-center gap-4 sm:text-right">
+        <div className="flex items-center gap-3 sm:text-right">
           <div>
-            <span className="text-[11px] uppercase tracking-widest text-white/40 block">
+            <span className="text-[10px] uppercase tracking-widest text-slate-400 block">
               Memories Archive
             </span>
-            <span className="text-xs sm:text-sm font-mono text-white/70">
+            <span className="text-xs sm:text-sm font-mono text-slate-300">
               Est. 2022 • {gallery.length} Moments
             </span>
           </div>
@@ -88,235 +86,207 @@ export const HomePage: React.FC<HomePageProps> = ({
         </div>
       </header>
 
-      {/* Featured Audio Voice/Song Ambient Banner */}
+      {/* Featured Audio Melody Banner */}
       {featuredAudio && (
-        <div className="bg-pink-500/10 backdrop-blur-2xl border border-pink-500/20 rounded-3xl p-5 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xl">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-pink-500/20 border border-pink-500/30 flex items-center justify-center text-pink-300 shrink-0">
-              <Music className="w-6 h-6 animate-pulse" />
+        <div className="bg-[#14142b] border border-pink-500/20 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-md">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-pink-500/20 border border-pink-500/30 flex items-center justify-center text-pink-400 shrink-0">
+              <Music className="w-5 h-5" />
             </div>
             <div>
-              <span className="text-[10px] uppercase tracking-widest text-pink-300/80 font-bold block mb-0.5">
-                Featured Melody / Audio
+              <span className="text-[10px] uppercase tracking-widest text-pink-400 font-bold block">
+                Featured Melody
               </span>
-              <h3 className="text-base sm:text-lg font-medium text-white">{featuredAudio.title}</h3>
-              <p className="text-xs text-white/60">{featuredAudio.artist || featuredAudio.author} • {featuredAudio.date}</p>
+              <h3 className="text-sm font-semibold text-white">
+                {featuredAudio.title} — <span className="text-slate-400 text-xs font-normal">{featuredAudio.artist || featuredAudio.author}</span>
+              </h3>
             </div>
           </div>
-          <button
+          <GlassButton
+            variant="secondary"
+            size="sm"
             onClick={() => onNavigate('music')}
-            className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 hover:bg-white/20 text-xs font-semibold text-white border border-white/20 transition-all cursor-pointer"
+            icon={<ArrowRight className="w-3.5 h-3.5 text-pink-400" />}
           >
-            <span>Open Melodies</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
+            Open Music Box
+          </GlassButton>
         </div>
       )}
 
-      {/* Quick Stats Bento Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+      {/* Quick Navigation Cards Grid */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
         <button
           onClick={() => onNavigate('gallery')}
-          className="text-left cursor-pointer group"
+          className="p-4 rounded-2xl bg-[#131328] border border-slate-800 hover:border-pink-500/40 transition-colors text-left group"
         >
-          <GlassCard hoverEffect className="p-5 sm:p-6 flex flex-col items-center justify-center text-center border-white/10">
-            <div className="w-12 h-12 rounded-full bg-pink-500/15 border border-pink-500/30 text-pink-300 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-              <ImageIcon className="w-5 h-5" />
-            </div>
-            <div className="text-2xl sm:text-3xl font-bold text-white font-serif-display">{gallery.length}</div>
-            <div className="text-[11px] uppercase tracking-wider text-white/50 font-medium mt-1">Moments</div>
-          </GlassCard>
+          <div className="p-2 w-fit rounded-xl bg-pink-500/15 text-pink-400 mb-3">
+            <ImageIcon className="w-5 h-5" />
+          </div>
+          <h3 className="text-sm font-semibold text-white">Gallery</h3>
+          <p className="text-[11px] text-slate-400 mt-0.5">{gallery.length} photos & videos</p>
         </button>
 
         <button
           onClick={() => onNavigate('letters')}
-          className="text-left cursor-pointer group"
+          className="p-4 rounded-2xl bg-[#131328] border border-slate-800 hover:border-rose-500/40 transition-colors text-left group"
         >
-          <GlassCard hoverEffect className="p-5 sm:p-6 flex flex-col items-center justify-center text-center border-white/10">
-            <div className="w-12 h-12 rounded-full bg-rose-500/15 border border-rose-500/30 text-rose-300 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-              <Mail className="w-5 h-5" />
-            </div>
-            <div className="text-2xl sm:text-3xl font-bold text-white font-serif-display">{letters.length}</div>
-            <div className="text-[11px] uppercase tracking-wider text-white/50 font-medium mt-1">Love Letters</div>
-          </GlassCard>
+          <div className="p-2 w-fit rounded-xl bg-rose-500/15 text-rose-400 mb-3">
+            <Mail className="w-5 h-5" />
+          </div>
+          <h3 className="text-sm font-semibold text-white">Love Letters</h3>
+          <p className="text-[11px] text-slate-400 mt-0.5">{letters.length} saved letters</p>
         </button>
 
         <button
           onClick={() => onNavigate('notes')}
-          className="text-left cursor-pointer group"
+          className="p-4 rounded-2xl bg-[#131328] border border-slate-800 hover:border-amber-500/40 transition-colors text-left group"
         >
-          <GlassCard hoverEffect className="p-5 sm:p-6 flex flex-col items-center justify-center text-center border-white/10">
-            <div className="w-12 h-12 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-              <StickyNoteIcon className="w-5 h-5" />
-            </div>
-            <div className="text-2xl sm:text-3xl font-bold text-white font-serif-display">{notes.length}</div>
-            <div className="text-[11px] uppercase tracking-wider text-white/50 font-medium mt-1">Sticky Notes</div>
-          </GlassCard>
+          <div className="p-2 w-fit rounded-xl bg-amber-500/15 text-amber-400 mb-3">
+            <StickyNoteIcon className="w-5 h-5" />
+          </div>
+          <h3 className="text-sm font-semibold text-white">Sticky Notes</h3>
+          <p className="text-[11px] text-slate-400 mt-0.5">{notes.length} cute thoughts</p>
         </button>
 
         <button
-          onClick={() => onNavigate('music')}
-          className="text-left cursor-pointer group"
+          onClick={() => onNavigate('timeline')}
+          className="p-4 rounded-2xl bg-[#131328] border border-slate-800 hover:border-purple-500/40 transition-colors text-left group"
         >
-          <GlassCard hoverEffect className="p-5 sm:p-6 flex flex-col items-center justify-center text-center border-white/10">
-            <div className="w-12 h-12 rounded-full bg-purple-500/15 border border-purple-500/30 text-purple-300 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-              <Music className="w-5 h-5" />
-            </div>
-            <div className="text-2xl sm:text-3xl font-bold text-white font-serif-display">{audios.length}</div>
-            <div className="text-[11px] uppercase tracking-wider text-white/50 font-medium mt-1">Melodies</div>
-          </GlassCard>
+          <div className="p-2 w-fit rounded-xl bg-purple-500/15 text-purple-400 mb-3">
+            <CalendarHeart className="w-5 h-5" />
+          </div>
+          <h3 className="text-sm font-semibold text-white">Our Story</h3>
+          <p className="text-[11px] text-slate-400 mt-0.5">Journey milestones</p>
         </button>
       </div>
 
-      {/* Featured Moments Showcase */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Heart className="w-4 h-4 text-pink-400 fill-pink-400" />
-            <h2 className="text-lg sm:text-xl font-light text-white tracking-wide font-serif-display">
-              Featured Moments 📸
-            </h2>
-          </div>
-          <button
-            onClick={() => onNavigate('gallery')}
-            className="text-xs text-pink-300 hover:text-pink-200 flex items-center gap-1 font-medium cursor-pointer"
-          >
-            <span>View Full Gallery</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {(favoritePhotos.length > 0 ? favoritePhotos : gallery.slice(0, 4)).map((item) => (
-            <motion.div
-              key={item.id}
-              whileHover={{ y: -4 }}
-              onClick={() => onSelectMedia(item)}
-              className="cursor-pointer group"
-            >
-              <GlassCard className="overflow-hidden border-white/10 group-hover:border-pink-500/40 transition-all h-full flex flex-col rounded-3xl">
-                <div className="relative aspect-4/3 overflow-hidden bg-black/40">
-                  <img
-                    src={item.thumbnailUrl || item.url}
-                    alt={item.title}
-                    referrerPolicy="no-referrer"
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60 group-hover:opacity-80 transition-opacity" />
-                  <span className="absolute top-3 right-3 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-black/60 backdrop-blur-md text-pink-200 border border-white/10">
-                    {item.author}
-                  </span>
-                </div>
-                <div className="p-4 flex-1 flex flex-col justify-between">
-                  <h3 className="text-sm font-semibold text-white truncate">{item.title}</h3>
-                  <div className="flex items-center justify-between text-[11px] text-white/50 mt-2">
-                    <span className="flex items-center gap-1">
-                      <Clock className="w-3 h-3 text-pink-400" /> {item.date}
-                    </span>
-                    {item.location && (
-                      <span className="flex items-center gap-1 truncate max-w-[110px]">
-                        <MapPin className="w-3 h-3 text-pink-400" /> {item.location}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </GlassCard>
-            </motion.div>
-          ))}
-        </div>
-      </div>
-
-      {/* Two Column Section: Recent Letter + Pinned Notes */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Two Column Layout: Recent Letter & Pinned Notes */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
         {/* Recent Love Letter Card */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Mail className="w-4 h-4 text-rose-400" />
-              <h2 className="text-lg font-light text-white font-serif-display">Latest Love Letter 💌</h2>
-            </div>
-            <button
-              onClick={() => onNavigate('letters')}
-              className="text-xs text-rose-300 hover:underline cursor-pointer"
-            >
-              All Letters
-            </button>
-          </div>
-
-          {recentLetter ? (
-            <GlassCard
-              hoverEffect
-              onClick={() => onSelectLetter(recentLetter)}
-              className="p-6 sm:p-8 border-white/10 cursor-pointer relative overflow-hidden flex flex-col justify-between min-h-[220px]"
-            >
-              <div className="opacity-10 absolute top-2 right-4 text-7xl font-serif italic select-none pointer-events-none">
-                “
-              </div>
-              <div>
-                <p className="text-white/60 text-[10px] uppercase tracking-widest mb-3">
-                  From {recentLetter.sender} to {recentLetter.recipient} • {recentLetter.date}
-                </p>
-                <h3 className="text-base font-bold text-white mb-2">{recentLetter.title}</h3>
-                <p className="text-white/90 text-sm sm:text-base font-serif italic line-clamp-3 leading-relaxed">
-                  "{recentLetter.content}"
-                </p>
-              </div>
-              <div className="mt-4 pt-3 border-t border-white/10 flex items-center justify-between text-xs text-pink-300 font-medium">
-                <span className="flex items-center gap-1.5">
-                  <span className="text-lg">{recentLetter.stampEmoji || '💌'}</span> Read full keepsake
+        <GlassCard className="p-5 border-slate-800 flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">💌</span>
+                <span className="text-xs font-semibold text-rose-400 uppercase tracking-wider">
+                  Latest Love Letter
                 </span>
-                <ArrowRight className="w-3.5 h-3.5" />
               </div>
-            </GlassCard>
-          ) : (
-            <GlassCard className="p-6 text-center text-white/50 text-sm">
-              No letters yet. Write your first letter!
-            </GlassCard>
-          )}
-        </div>
-
-        {/* Pinned Sticky Notes */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Pin className="w-4 h-4 text-amber-400" />
-              <h2 className="text-lg font-light text-white font-serif-display">Pinned Notes 📌</h2>
+              <button
+                onClick={() => onNavigate('letters')}
+                className="text-[11px] text-slate-400 hover:text-white flex items-center gap-1"
+              >
+                View all <ArrowRight className="w-3 h-3" />
+              </button>
             </div>
-            <button
-              onClick={() => onNavigate('notes')}
-              className="text-xs text-amber-300 hover:underline cursor-pointer"
-            >
-              View Board
-            </button>
-          </div>
 
-          <div className="space-y-2.5">
-            {pinnedNotes.length > 0 ? (
-              pinnedNotes.map((note) => (
-                <GlassCard
-                  key={note.id}
-                  hoverEffect
-                  onClick={() => onNavigate('notes')}
-                  className="p-4 sm:p-5 border-white/10 cursor-pointer flex items-start gap-3.5"
-                >
-                  <span className="text-2xl shrink-0">{note.emoji || '✨'}</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-white/90">{note.text}</p>
-                    <div className="flex items-center justify-between text-[11px] text-white/40 mt-2">
-                      <span className="text-pink-300">By {note.author}</span>
-                      <span>{note.date}</span>
-                    </div>
-                  </div>
-                </GlassCard>
-              ))
+            {recentLetter ? (
+              <div
+                onClick={() => onSelectLetter(recentLetter)}
+                className="p-4 rounded-xl bg-[#181832] border border-slate-700/60 cursor-pointer hover:border-pink-500/30 transition-colors"
+              >
+                <div className="flex items-center justify-between text-xs text-slate-400 mb-2">
+                  <span className="font-semibold text-pink-300">From: {recentLetter.sender}</span>
+                  <span>{recentLetter.date}</span>
+                </div>
+                <h4 className="text-base font-serif-display font-semibold text-white mb-1.5">
+                  {recentLetter.title}
+                </h4>
+                <p className="text-xs text-slate-300 line-clamp-3 font-light leading-relaxed">
+                  {recentLetter.content}
+                </p>
+              </div>
             ) : (
-              <GlassCard className="p-6 text-center text-white/50 text-sm">
-                No pinned notes yet.
-              </GlassCard>
+              <div className="py-8 text-center text-xs text-slate-500">
+                No love letters yet. Click "Write" to compose one!
+              </div>
             )}
           </div>
-        </div>
+        </GlassCard>
+
+        {/* Pinned Sticky Notes Card */}
+        <GlassCard className="p-5 border-slate-800 flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">📌</span>
+                <span className="text-xs font-semibold text-amber-400 uppercase tracking-wider">
+                  Pinned Notes
+                </span>
+              </div>
+              <button
+                onClick={() => onNavigate('notes')}
+                className="text-[11px] text-slate-400 hover:text-white flex items-center gap-1"
+              >
+                View all <ArrowRight className="w-3 h-3" />
+              </button>
+            </div>
+
+            {pinnedNotes.length > 0 ? (
+              <div className="space-y-2.5">
+                {pinnedNotes.map((note) => (
+                  <div
+                    key={note.id}
+                    className="p-3 rounded-xl bg-[#181832] border border-slate-700/60 flex items-start justify-between gap-3"
+                  >
+                    <div className="flex items-start gap-2.5">
+                      <span className="text-base">{note.emoji || '✨'}</span>
+                      <div>
+                        <p className="text-xs text-slate-200 leading-relaxed">{note.text}</p>
+                        <span className="text-[10px] text-pink-300 font-semibold mt-1 block">
+                          — {note.author}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="py-8 text-center text-xs text-slate-500">
+                No pinned notes. Pin notes from the Notes tab!
+              </div>
+            )}
+          </div>
+        </GlassCard>
       </div>
+
+      {/* Favorite Moments Grid Preview */}
+      {favoritePhotos.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+              <Heart className="w-4 h-4 text-pink-400 fill-pink-400/80" /> Favorite Memories
+            </h3>
+            <button
+              onClick={() => onNavigate('gallery')}
+              className="text-xs text-pink-400 hover:text-pink-300 flex items-center gap-1"
+            >
+              See all gallery <ArrowRight className="w-3 h-3" />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {favoritePhotos.map((photo) => (
+              <div
+                key={photo.id}
+                onClick={() => onSelectMedia(photo)}
+                className="group relative rounded-xl overflow-hidden bg-[#181832] border border-slate-800 cursor-pointer aspect-square"
+              >
+                <img
+                  src={photo.url}
+                  alt={photo.title}
+                  loading="lazy"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity p-2.5 flex flex-col justify-end">
+                  <p className="text-xs font-semibold text-white truncate">{photo.title}</p>
+                  <span className="text-[10px] text-pink-300">{photo.author}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

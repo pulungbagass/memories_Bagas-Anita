@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Pause, SkipForward, SkipBack, Volume2, VolumeX, Music, Heart, ChevronDown, ChevronUp } from 'lucide-react';
+import { Play, Pause, SkipForward, SkipBack, Volume2, VolumeX, Music, ChevronDown, ChevronUp } from 'lucide-react';
 import { AudioMemory } from '../../types';
-import { motion, AnimatePresence } from 'motion/react';
 
 interface AudioPlayerBarProps {
   tracks: AudioMemory[];
@@ -29,9 +28,7 @@ export const AudioPlayerBar: React.FC<AudioPlayerBarProps> = ({
   useEffect(() => {
     if (audioRef.current) {
       if (isPlaying) {
-        audioRef.current.play().catch(() => {
-          // browser autoplay restrictions
-        });
+        audioRef.current.play().catch(() => {});
       } else {
         audioRef.current.pause();
       }
@@ -44,14 +41,6 @@ export const AudioPlayerBar: React.FC<AudioPlayerBarProps> = ({
       const total = audioRef.current.duration || 1;
       setProgress((current / total) * 100);
       setDuration(total);
-    }
-  };
-
-  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (audioRef.current && duration > 0) {
-      const seekTime = (parseFloat(e.target.value) / 100) * duration;
-      audioRef.current.currentTime = seekTime;
-      setProgress(parseFloat(e.target.value));
     }
   };
 
@@ -75,117 +64,84 @@ export const AudioPlayerBar: React.FC<AudioPlayerBarProps> = ({
         muted={isMuted}
       />
 
-      <div className="fixed top-4 right-4 z-40">
-        <AnimatePresence mode="wait">
-          {isMinimized ? (
-            /* Minimized floating pill */
-            <motion.button
-              key="mini"
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.8 }}
-              onClick={() => setIsMinimized(false)}
-              className="flex items-center gap-2.5 px-4 py-2 rounded-full bg-white/10 backdrop-blur-2xl border border-white/20 text-white shadow-xl shadow-black/40 hover:border-white/40 transition-all group"
-            >
-              <div className={`p-1.5 rounded-full ${isPlaying ? 'bg-pink-500 text-white animate-pulse' : 'bg-white/10 text-pink-300'}`}>
-                <Music className="w-3.5 h-3.5" />
-              </div>
-              <div className="text-left max-w-[120px] sm:max-w-[160px] truncate">
-                <span className="text-xs font-medium block truncate text-white">{currentTrack.title}</span>
-                <span className="text-[10px] text-pink-300 block truncate">{currentTrack.artist || 'Memories Audio'}</span>
-              </div>
-              <ChevronDown className="w-3.5 h-3.5 text-white/50 group-hover:text-white" />
-            </motion.button>
-          ) : (
-            /* Expanded Player Card */
-            <motion.div
-              key="full"
-              initial={{ opacity: 0, y: -10, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -10, scale: 0.95 }}
-              className="w-80 rounded-3xl bg-[#0c0c1e]/90 backdrop-blur-2xl border border-white/20 p-5 shadow-2xl shadow-black/60"
-            >
-              <div className="flex items-center justify-between pb-2 mb-2 border-b border-white/10">
-                <div className="flex items-center gap-2 text-xs text-pink-300 font-medium">
-                  <Heart className="w-3.5 h-3.5 text-pink-400 fill-pink-400" />
-                  <span>Our Melody</span>
+      <div className="fixed top-3 right-3 z-40">
+        {isMinimized ? (
+          <button
+            onClick={() => setIsMinimized(false)}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#131328] border border-slate-700 shadow-md text-slate-200 hover:text-white hover:border-pink-500/40 transition-colors"
+          >
+            <div className={`p-1 rounded-full ${isPlaying ? 'bg-pink-500 text-white' : 'bg-slate-800 text-slate-400'}`}>
+              <Music className="w-3.5 h-3.5" />
+            </div>
+            <span className="text-xs font-medium max-w-[100px] sm:max-w-[140px] truncate">
+              {currentTrack.title}
+            </span>
+            <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+          </button>
+        ) : (
+          <div className="w-72 sm:w-80 p-3 rounded-2xl bg-[#131328] border border-slate-700 shadow-xl space-y-2.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 truncate">
+                <div className="p-1.5 rounded-lg bg-pink-500/20 text-pink-400 shrink-0">
+                  <Music className="w-4 h-4" />
                 </div>
+                <div className="truncate">
+                  <h4 className="text-xs font-semibold text-white truncate">{currentTrack.title}</h4>
+                  <p className="text-[10px] text-slate-400 truncate">{currentTrack.artist || currentTrack.author}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsMinimized(true)}
+                className="p-1 text-slate-400 hover:text-white rounded-lg transition-colors"
+              >
+                <ChevronUp className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Progress Bar */}
+            <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+              <div
+                className="bg-pink-500 h-full rounded-full transition-all"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+
+            {/* Controls */}
+            <div className="flex items-center justify-between pt-1">
+              <button
+                onClick={() => setIsMuted(!isMuted)}
+                className="p-1.5 text-slate-400 hover:text-white transition-colors"
+              >
+                {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+              </button>
+
+              <div className="flex items-center gap-2">
                 <button
-                  onClick={() => setIsMinimized(true)}
-                  className="p-1 text-white/50 hover:text-white rounded-lg hover:bg-white/10"
+                  onClick={handlePrev}
+                  className="p-1.5 text-slate-300 hover:text-white transition-colors"
                 >
-                  <ChevronUp className="w-4 h-4" />
+                  <SkipBack className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={onTogglePlay}
+                  className="p-2 rounded-full bg-pink-500 text-white hover:bg-pink-400 transition-colors shadow-sm"
+                >
+                  {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 fill-current" />}
+                </button>
+                <button
+                  onClick={handleNext}
+                  className="p-1.5 text-slate-300 hover:text-white transition-colors"
+                >
+                  <SkipForward className="w-4 h-4" />
                 </button>
               </div>
 
-              <div className="flex items-center gap-3 mb-3">
-                {currentTrack.coverUrl ? (
-                  <img
-                    src={currentTrack.coverUrl}
-                    alt={currentTrack.title}
-                    referrerPolicy="no-referrer"
-                    className="w-12 h-12 rounded-2xl object-cover border border-white/15"
-                  />
-                ) : (
-                  <div className="w-12 h-12 rounded-2xl bg-pink-500/20 flex items-center justify-center text-pink-300 border border-pink-500/30">
-                    <Music className="w-6 h-6" />
-                  </div>
-                )}
-                <div className="flex-1 min-w-0">
-                  <h4 className="text-sm font-semibold text-white truncate">{currentTrack.title}</h4>
-                  <p className="text-xs text-pink-300/80 truncate">{currentTrack.artist || currentTrack.author}</p>
-                </div>
-              </div>
-
-              {/* Progress bar */}
-              <div className="mb-3">
-                <input
-                  type="range"
-                  min="0"
-                  max="100"
-                  value={progress}
-                  onChange={handleSeek}
-                  className="w-full h-1.5 bg-white/10 rounded-lg appearance-none cursor-pointer accent-pink-500"
-                />
-              </div>
-
-              {/* Controls */}
-              <div className="flex items-center justify-between">
-                <button
-                  onClick={() => setIsMuted(!isMuted)}
-                  className="p-2 text-white/50 hover:text-white rounded-full hover:bg-white/10"
-                >
-                  {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-                </button>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={handlePrev}
-                    className="p-2 text-white/70 hover:text-white rounded-full hover:bg-white/10"
-                  >
-                    <SkipBack className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={onTogglePlay}
-                    className="p-2.5 bg-pink-500 text-white rounded-full shadow-lg shadow-pink-500/40 hover:scale-105 transition-all"
-                  >
-                    {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 ml-0.5" />}
-                  </button>
-                  <button
-                    onClick={handleNext}
-                    className="p-2 text-white/70 hover:text-white rounded-full hover:bg-white/10"
-                  >
-                    <SkipForward className="w-4 h-4" />
-                  </button>
-                </div>
-
-                <div className="text-[10px] text-white/50 font-mono">
-                  {currentTrackIndex + 1}/{tracks.length}
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+              <span className="text-[10px] font-mono text-slate-400">
+                {currentTrack.duration || '3:00'}
+              </span>
+            </div>
+          </div>
+        )}
       </div>
     </>
   );

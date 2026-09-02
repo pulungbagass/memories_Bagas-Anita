@@ -39,37 +39,37 @@ export const GlassModal: React.FC<GlassModalProps> = ({
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
           {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
             onClick={onClose}
-            className="fixed inset-0 bg-black/75 backdrop-blur-md"
+            className="fixed inset-0 bg-black/80"
           />
 
           {/* Modal Content */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 15 }}
+            initial={{ opacity: 0, scale: 0.98, y: 8 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 15 }}
-            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+            exit={{ opacity: 0, scale: 0.98, y: 8 }}
+            transition={{ duration: 0.15 }}
             className={`
-              relative w-full ${maxWidthClasses[maxWidth]} my-8
-              bg-slate-900/85 backdrop-blur-2xl
-              border border-white/15 rounded-3xl shadow-2xl shadow-rose-950/50
-              p-6 sm:p-8 z-10 max-h-[90vh] flex flex-col overflow-hidden
+              relative w-full ${maxWidthClasses[maxWidth]} my-auto
+              bg-[#121226] border border-slate-700/60 rounded-2xl shadow-2xl
+              p-5 sm:p-7 z-10 max-h-[92vh] flex flex-col overflow-hidden
             `}
           >
             {/* Header */}
-            <div className="flex items-center justify-between pb-4 border-b border-white/10 shrink-0">
-              <div className="text-xl font-semibold text-white tracking-wide">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800 shrink-0">
+              <div className="text-lg font-semibold text-white">
                 {title}
               </div>
               <button
                 onClick={onClose}
-                className="p-2 text-slate-400 hover:text-white rounded-full hover:bg-white/10 transition-colors"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
                 aria-label="Close modal"
               >
                 <X className="w-5 h-5" />
@@ -77,7 +77,7 @@ export const GlassModal: React.FC<GlassModalProps> = ({
             </div>
 
             {/* Scrollable Body */}
-            <div className="mt-4 overflow-y-auto pr-1 flex-1">
+            <div className="overflow-y-auto flex-1 py-4 pr-1">
               {children}
             </div>
           </motion.div>
