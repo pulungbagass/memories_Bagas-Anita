@@ -19,133 +19,12 @@ const upload = multer({
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// In-Memory Fallback State (when Postgres / Blob is running in local dev or without credentials)
-let fallbackGallery: any[] = [
-  {
-    id: 'gal_default_1',
-    title: 'Our First Sunset Date 🌅',
-    description: 'The golden hour in Jimbaran with waves splashing and the most beautiful smile beside me.',
-    mediaType: 'photo',
-    url: 'https://images.unsplash.com/photo-1518199266791-5375a83190b7?auto=format&fit=crop&w=1200&q=80',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1518199266791-5375a83190b7?auto=format&fit=crop&w=600&q=80',
-    author: 'Bagas',
-    category: 'Dates',
-    date: '2024-03-18',
-    location: 'Jimbaran Bay, Bali',
-    isFavorite: true,
-    aspectRatio: 1.5,
-    createdAt: new Date('2024-03-18T17:30:00Z').toISOString()
-  },
-  {
-    id: 'gal_default_2',
-    title: 'Cafe Date in Ubud ☕🌷',
-    description: 'Hot matcha latte and endless talks about our future dreams together.',
-    mediaType: 'photo',
-    url: 'https://images.unsplash.com/photo-1517256064527-09c73fc73e38?auto=format&fit=crop&w=1200&q=80',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1517256064527-09c73fc73e38?auto=format&fit=crop&w=600&q=80',
-    author: 'Anita',
-    category: 'Dates',
-    date: '2024-05-12',
-    location: 'Seniman Coffee, Ubud',
-    isFavorite: true,
-    aspectRatio: 1.33,
-    createdAt: new Date('2024-05-12T14:00:00Z').toISOString()
-  },
-  {
-    id: 'gal_default_3',
-    title: 'Roadtrip Adventure 🚗🌿',
-    description: 'Singing our favorite songs in the car on the way to Kintamani highlands.',
-    mediaType: 'photo',
-    url: 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?auto=format&fit=crop&w=1200&q=80',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?auto=format&fit=crop&w=600&q=80',
-    author: 'Together',
-    category: 'Trips',
-    date: '2024-07-20',
-    location: 'Kintamani Mountain View',
-    isFavorite: false,
-    aspectRatio: 1.77,
-    createdAt: new Date('2024-07-20T10:15:00Z').toISOString()
-  }
-];
-
-let fallbackLetters: any[] = [
-  {
-    id: 'let_default_1',
-    title: 'To My Favorite Person in the World 💖',
-    content: 'Dear Anita,\n\nEvery day with you feels like a warm cup of coffee on a rainy morning. Thank you for always being my safe place, my biggest supporter, and my endless source of laughter. Looking forward to making thousands of more memories with you.',
-    sender: 'Bagas',
-    recipient: 'Anita',
-    date: '2024-03-18',
-    stampEmoji: '💌',
-    isRead: true,
-    paperColor: 'rose',
-    createdAt: new Date('2024-03-18T20:00:00Z').toISOString()
-  },
-  {
-    id: 'let_default_2',
-    title: 'Thank You for Being You 🌷',
-    content: 'Dear Bagas,\n\nThank you for always listening patiently to my stories, holding my hand whenever I feel anxious, and making me the happiest girl alive. I am so grateful to have you in my life.',
-    sender: 'Anita',
-    recipient: 'Bagas',
-    date: '2024-05-20',
-    stampEmoji: '🌹',
-    isRead: true,
-    paperColor: 'lavender',
-    createdAt: new Date('2024-05-20T21:30:00Z').toISOString()
-  }
-];
-
-let fallbackNotes: any[] = [
-  {
-    id: 'note_default_1',
-    text: 'Don\'t forget to drink water and take a rest today! Proud of all your hard work. 💧🌸',
-    author: 'Anita',
-    color: 'pink',
-    date: '2024-08-10',
-    isPinned: true,
-    emoji: '🌸',
-    createdAt: new Date('2024-08-10T09:00:00Z').toISOString()
-  },
-  {
-    id: 'note_default_2',
-    text: 'Movie night playlist is ready! We are watching Studio Ghibli tonight 🍿🎬',
-    author: 'Bagas',
-    color: 'purple',
-    date: '2024-08-14',
-    isPinned: false,
-    emoji: '🍿',
-    createdAt: new Date('2024-08-14T18:00:00Z').toISOString()
-  }
-];
-
-let fallbackAudios: any[] = [
-  {
-    id: 'aud_default_1',
-    title: 'Nothing\'s Gonna Change My Love For You',
-    artist: 'George Benson',
-    url: 'https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=romantic-acoustic-guitar-112191.mp3',
-    duration: '3:45',
-    author: 'Bagas',
-    type: 'song',
-    date: '2024-03-18',
-    coverUrl: 'https://images.unsplash.com/photo-1518199266791-5375a83190b7?auto=format&fit=crop&w=400&q=80',
-    description: 'Our special anthem on roadtrips and cozy evenings.',
-    createdAt: new Date('2024-03-18T12:00:00Z').toISOString()
-  },
-  {
-    id: 'aud_default_2',
-    title: 'Good Morning Voice Note ☕',
-    artist: 'Anita',
-    url: 'https://cdn.pixabay.com/download/audio/2022/01/18/audio_d0a13f69d2.mp3?filename=gentle-acoustic-guitar-15886.mp3',
-    duration: '0:42',
-    author: 'Anita',
-    type: 'voicenote',
-    date: '2024-06-05',
-    coverUrl: 'https://images.unsplash.com/photo-1517256064527-09c73fc73e38?auto=format&fit=crop&w=400&q=80',
-    description: 'Sending morning cheers before your big presentation.',
-    createdAt: new Date('2024-06-05T07:30:00Z').toISOString()
-  }
-];
+// In-Memory Fallback State (strictly empty default arrays as requested)
+let fallbackGallery: any[] = [];
+let fallbackLetters: any[] = [];
+let fallbackNotes: any[] = [];
+let fallbackAudios: any[] = [];
+let fallbackMilestones: any[] = [];
 
 // Helper to check credentials
 const getBlobToken = () => process.env.BLOB_READ_WRITE_TOKEN || '';
@@ -215,6 +94,19 @@ async function ensureTables() {
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
     `;
+    await sql`
+      CREATE TABLE IF NOT EXISTS milestones (
+        id TEXT PRIMARY KEY,
+        title VARCHAR(255) NOT NULL,
+        date VARCHAR(50) NOT NULL,
+        description TEXT NOT NULL,
+        emoji VARCHAR(20) DEFAULT '💖',
+        photo_url TEXT,
+        location VARCHAR(255),
+        category VARCHAR(50) DEFAULT 'Story',
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+    `;
     tablesInitialized = true;
   } catch (err: any) {
     console.warn('Postgres table auto-creation info:', err.message);
@@ -243,7 +135,7 @@ app.get('/api/health', async (req, res) => {
         SELECT table_name 
         FROM information_schema.tables 
         WHERE table_schema = 'public' 
-          AND table_name IN ('gallery', 'letters', 'notes', 'audios');
+          AND table_name IN ('gallery', 'letters', 'notes', 'audios', 'milestones');
       `;
       tablesFound = tableCheck.rows.map((r: any) => r.table_name);
     } catch (e: any) {
@@ -287,11 +179,12 @@ const handleGetAllData = async (req: express.Request, res: express.Response) => 
     if (hasPostgres()) {
       await ensureTables();
       try {
-        const [galRes, letRes, noteRes, audRes] = await Promise.all([
+        const [galRes, letRes, noteRes, audRes, milRes] = await Promise.all([
           sql`SELECT id, title, description, media_type AS "mediaType", url, thumbnail_url AS "thumbnailUrl", author, category, date, location, is_favorite AS "isFavorite", aspect_ratio AS "aspectRatio", created_at AS "createdAt" FROM gallery ORDER BY created_at DESC;`,
           sql`SELECT id, title, content, sender, recipient, date, stamp_emoji AS "stampEmoji", is_read AS "isRead", paper_color AS "paperColor", created_at AS "createdAt" FROM letters ORDER BY created_at DESC;`,
           sql`SELECT id, text, author, color, date, is_pinned AS "isPinned", emoji, created_at AS "createdAt" FROM notes ORDER BY created_at DESC;`,
           sql`SELECT id, title, artist, url, duration, author, type, date, cover_url AS "coverUrl", description, created_at AS "createdAt" FROM audios ORDER BY created_at DESC;`,
+          sql`SELECT id, title, date, description, emoji, photo_url AS "photoUrl", location, category, created_at AS "createdAt" FROM milestones ORDER BY date ASC, created_at ASC;`,
         ]);
 
         return res.json({
@@ -300,6 +193,7 @@ const handleGetAllData = async (req: express.Request, res: express.Response) => 
           letters: letRes.rows.length > 0 ? letRes.rows : fallbackLetters,
           notes: noteRes.rows.length > 0 ? noteRes.rows : fallbackNotes,
           audios: audRes.rows.length > 0 ? audRes.rows : fallbackAudios,
+          milestones: milRes.rows || [],
         });
       } catch (dbErr: any) {
         console.warn('Postgres query error, falling back to memory store:', dbErr.message);
@@ -312,6 +206,7 @@ const handleGetAllData = async (req: express.Request, res: express.Response) => 
       letters: fallbackLetters,
       notes: fallbackNotes,
       audios: fallbackAudios,
+      milestones: fallbackMilestones,
     });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });
@@ -321,6 +216,112 @@ const handleGetAllData = async (req: express.Request, res: express.Response) => 
 app.get('/api/all-data', handleGetAllData);
 app.get('/api/data', handleGetAllData);
 
+// Media Link Info Auto-Extraction Endpoint (YouTube, Spotify, TikTok, Instagram, etc.)
+app.get('/api/media-info', async (req, res) => {
+  try {
+    const rawUrl = String(req.query.url || '').trim();
+    if (!rawUrl) {
+      return res.status(400).json({ success: false, error: 'URL parameter is required' });
+    }
+
+    let platform: 'youtube' | 'spotify' | 'tiktok' | 'instagram' | 'soundcloud' | 'direct' = 'direct';
+    let title = '';
+    let artist = '';
+    let thumbnailUrl = '';
+    let embedUrl = '';
+
+    if (rawUrl.includes('youtube.com') || rawUrl.includes('youtu.be')) {
+      platform = 'youtube';
+      artist = 'YouTube Music';
+      // Try fetching YouTube oEmbed
+      try {
+        const oembedRes = await fetch(`https://www.youtube.com/oembed?url=${encodeURIComponent(rawUrl)}&format=json`);
+        if (oembedRes.ok) {
+          const data: any = await oembedRes.json();
+          title = data.title || '';
+          artist = data.author_name || 'YouTube Creator';
+          thumbnailUrl = data.thumbnail_url || '';
+        }
+      } catch {
+        // Fallback title heuristic
+      }
+
+      // Generate embed url if possible
+      const ytMatch = rawUrl.match(/(?:watch\?v=|embed\/|shorts\/|youtu\.be\/)([\w-]{11})/i);
+      if (ytMatch && ytMatch[1]) {
+        embedUrl = `https://www.youtube.com/embed/${ytMatch[1]}`;
+      }
+    } else if (rawUrl.includes('spotify.com')) {
+      platform = 'spotify';
+      artist = 'Spotify Track';
+      try {
+        const oembedRes = await fetch(`https://open.spotify.com/oembed?url=${encodeURIComponent(rawUrl)}`);
+        if (oembedRes.ok) {
+          const data: any = await oembedRes.json();
+          title = data.title || '';
+          thumbnailUrl = data.thumbnail_url || '';
+        }
+      } catch {}
+
+      // Convert spotify track URL to embed URL
+      const spMatch = rawUrl.match(/spotify\.com\/(track|album|playlist|episode)\/([a-zA-Z0-9]+)/i);
+      if (spMatch) {
+        embedUrl = `https://open.spotify.com/embed/${spMatch[1]}/${spMatch[2]}`;
+      }
+    } else if (rawUrl.includes('tiktok.com')) {
+      platform = 'tiktok';
+      artist = 'TikTok Audio';
+      try {
+        const oembedRes = await fetch(`https://www.tiktok.com/oembed?url=${encodeURIComponent(rawUrl)}`);
+        if (oembedRes.ok) {
+          const data: any = await oembedRes.json();
+          title = data.title || 'TikTok Soundtrack';
+          artist = data.author_name || 'TikTok Creator';
+          thumbnailUrl = data.thumbnail_url || '';
+        }
+      } catch {}
+    } else if (rawUrl.includes('instagram.com')) {
+      platform = 'instagram';
+      artist = 'Instagram Reel / Audio';
+      title = 'Instagram Soundtrack';
+    } else if (rawUrl.includes('soundcloud.com')) {
+      platform = 'soundcloud';
+      artist = 'SoundCloud Artist';
+      try {
+        const oembedRes = await fetch(`https://soundcloud.com/oembed?url=${encodeURIComponent(rawUrl)}&format=json`);
+        if (oembedRes.ok) {
+          const data: any = await oembedRes.json();
+          title = data.title || '';
+          artist = data.author_name || 'SoundCloud Artist';
+          thumbnailUrl = data.thumbnail_url || '';
+        }
+      } catch {}
+    } else {
+      platform = 'direct';
+      title = rawUrl.split('/').pop()?.split('?')[0]?.replace(/\.[a-zA-Z0-9]+$/, '') || 'Audio Memory';
+      artist = 'Audio Stream';
+    }
+
+    return res.json({
+      success: true,
+      platform,
+      title: title || 'Favorite Track',
+      artist: artist || 'Various Artists',
+      thumbnailUrl,
+      embedUrl,
+      url: rawUrl,
+    });
+  } catch (err: any) {
+    return res.json({
+      success: false,
+      error: err.message,
+      platform: 'direct',
+      title: 'Custom Track',
+      artist: 'Unknown Artist',
+    });
+  }
+});
+
 app.post('/api/data', async (req, res) => {
   try {
     const { table, data } = req.body || {};
@@ -328,6 +329,10 @@ app.post('/api/data', async (req, res) => {
     const id = data.id || `${table.slice(0, 3)}_${Date.now()}`;
     const createdAt = data.createdAt || new Date().toISOString();
     const item = { ...data, id, createdAt };
+
+    if (table === 'milestones') {
+      fallbackMilestones = [item, ...fallbackMilestones.filter(m => m.id !== id)];
+    }
 
     if (hasPostgres()) {
       await ensureTables();
@@ -355,9 +360,63 @@ app.post('/api/data', async (req, res) => {
           VALUES (${id}, ${data.title}, ${data.artist || 'Together'}, ${data.url}, ${data.duration || '3:00'}, ${data.author}, ${data.type || 'song'}, ${data.date}, ${data.coverUrl || ''}, ${data.description || ''}, ${createdAt})
           ON CONFLICT (id) DO UPDATE SET title = EXCLUDED.title, artist = EXCLUDED.artist;
         `;
+      } else if (table === 'milestones') {
+        await sql`
+          INSERT INTO milestones (id, title, date, description, emoji, photo_url, location, category, created_at)
+          VALUES (${id}, ${data.title}, ${data.date}, ${data.description}, ${data.emoji || '💖'}, ${data.photoUrl || ''}, ${data.location || ''}, ${data.category || 'Story'}, ${createdAt})
+          ON CONFLICT (id) DO UPDATE SET 
+            title = EXCLUDED.title, 
+            date = EXCLUDED.date, 
+            description = EXCLUDED.description, 
+            emoji = EXCLUDED.emoji, 
+            photo_url = EXCLUDED.photo_url, 
+            location = EXCLUDED.location, 
+            category = EXCLUDED.category;
+        `;
       }
     }
     res.json({ success: true, item });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.delete('/api/data', async (req, res) => {
+  try {
+    const table = req.query.table as string;
+    const id = req.query.id as string;
+    if (!table || !id) return res.status(400).json({ success: false, error: 'Table and id query params required' });
+
+    if (table === 'milestones') {
+      fallbackMilestones = fallbackMilestones.filter(m => m.id !== id);
+    } else if (table === 'gallery') {
+      fallbackGallery = fallbackGallery.filter(g => g.id !== id);
+    } else if (table === 'letters') {
+      fallbackLetters = fallbackLetters.filter(l => l.id !== id);
+    } else if (table === 'notes') {
+      fallbackNotes = fallbackNotes.filter(n => n.id !== id);
+    } else if (table === 'audios') {
+      fallbackAudios = fallbackAudios.filter(a => a.id !== id);
+    }
+
+    if (hasPostgres()) {
+      try {
+        if (table === 'milestones') {
+          await sql`DELETE FROM milestones WHERE id = ${id};`;
+        } else if (table === 'gallery') {
+          await sql`DELETE FROM gallery WHERE id = ${id};`;
+        } else if (table === 'letters') {
+          await sql`DELETE FROM letters WHERE id = ${id};`;
+        } else if (table === 'notes') {
+          await sql`DELETE FROM notes WHERE id = ${id};`;
+        } else if (table === 'audios') {
+          await sql`DELETE FROM audios WHERE id = ${id};`;
+        }
+      } catch (e: any) {
+        console.warn('Postgres delete error on table', table, e.message);
+      }
+    }
+    res.json({ success: true });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });
   }
@@ -735,6 +794,80 @@ app.delete('/api/audios/:id', async (req, res) => {
   if (hasPostgres()) {
     try {
       await sql`DELETE FROM audios WHERE id = ${id};`;
+    } catch (e: any) {
+      console.warn('Postgres delete error:', e.message);
+    }
+  }
+
+  res.json({ success: true });
+});
+
+// 8. Milestones Endpoints
+app.get('/api/milestones', async (req, res) => {
+  if (hasPostgres()) {
+    await ensureTables();
+    try {
+      const { rows } = await sql`
+        SELECT id, title, date, description, emoji, photo_url AS "photoUrl", location, category, created_at AS "createdAt"
+        FROM milestones ORDER BY date ASC, created_at ASC;
+      `;
+      return res.json({ success: true, items: rows });
+    } catch (e: any) {
+      console.warn('Postgres milestones query error:', e.message);
+    }
+  }
+  res.json({ success: true, items: fallbackMilestones });
+});
+
+app.post('/api/milestones', async (req, res) => {
+  try {
+    const milestone = req.body;
+    const id = milestone.id || `mile_${Date.now()}`;
+    const title = milestone.title || 'Untitled Milestone';
+    const date = milestone.date || new Date().toISOString().split('T')[0];
+    const description = milestone.description || '';
+    const emoji = milestone.emoji || '💖';
+    const photoUrl = milestone.photoUrl || '';
+    const location = milestone.location || '';
+    const category = milestone.category || 'Story';
+    const createdAt = milestone.createdAt || new Date().toISOString();
+
+    const newMilestone = { id, title, date, description, emoji, photoUrl, location, category, createdAt };
+    fallbackMilestones = [newMilestone, ...fallbackMilestones.filter(m => m.id !== id)];
+
+    if (hasPostgres()) {
+      await ensureTables();
+      try {
+        await sql`
+          INSERT INTO milestones (id, title, date, description, emoji, photo_url, location, category, created_at)
+          VALUES (${id}, ${title}, ${date}, ${description}, ${emoji}, ${photoUrl}, ${location}, ${category}, ${createdAt})
+          ON CONFLICT (id) DO UPDATE SET
+            title = EXCLUDED.title,
+            date = EXCLUDED.date,
+            description = EXCLUDED.description,
+            emoji = EXCLUDED.emoji,
+            photo_url = EXCLUDED.photo_url,
+            location = EXCLUDED.location,
+            category = EXCLUDED.category;
+        `;
+      } catch (e: any) {
+        console.warn('Postgres milestones insert error:', e.message);
+      }
+    }
+
+    res.json({ success: true, item: newMilestone });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.delete('/api/milestones/:id', async (req, res) => {
+  const { id } = req.params;
+  fallbackMilestones = fallbackMilestones.filter(m => m.id !== id);
+
+  if (hasPostgres()) {
+    try {
+      await sql`DELETE FROM milestones WHERE id = ${id};`;
     } catch (e: any) {
       console.warn('Postgres delete error:', e.message);
     }

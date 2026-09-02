@@ -17,7 +17,6 @@ import {
   FileCode
 } from 'lucide-react';
 import { checkVercelServiceStatus, VercelServiceStatus } from '../../lib/vercelClient';
-import { memoryStorage } from '../../lib/storage';
 
 export const VERCEL_POSTGRES_SCHEMA_SQL = `-- Vercel Postgres Tables Schema for Bagas & Anita
 
@@ -73,6 +72,18 @@ CREATE TABLE IF NOT EXISTS audios (
     cover_url TEXT,
     description TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS milestones (
+    id TEXT PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    date VARCHAR(50) NOT NULL,
+    description TEXT NOT NULL,
+    emoji VARCHAR(20) DEFAULT '💖',
+    photo_url TEXT,
+    location VARCHAR(255),
+    category VARCHAR(50) DEFAULT 'Story',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );`;
 
 interface SettingsModalProps {
@@ -89,7 +100,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [activeTab, setActiveTab] = useState<'status' | 'schema' | 'auth'>('status');
   const [copied, setCopied] = useState(false);
   const [copiedDiag, setCopiedDiag] = useState(false);
-  const [resetConfirm, setResetConfirm] = useState(false);
   const [serviceStatus, setServiceStatus] = useState<VercelServiceStatus | null>(null);
   const [isPinging, setIsPinging] = useState(false);
 
@@ -119,13 +129,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     navigator.clipboard.writeText(JSON.stringify(serviceStatus, null, 2));
     setCopiedDiag(true);
     setTimeout(() => setCopiedDiag(false), 2000);
-  };
-
-  const handleResetData = () => {
-    memoryStorage.resetToDefault();
-    onRefreshData();
-    setResetConfirm(false);
-    onClose();
   };
 
   const isBlobReady = serviceStatus?.blob?.hasToken ?? serviceStatus?.hasBlobToken;
@@ -295,30 +298,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 </div>
               )}
             </div>
-          </div>
-
-          {/* Reset Action */}
-          <div className="pt-2 flex flex-col gap-2">
-            {!resetConfirm ? (
-              <GlassButton
-                variant="ghost"
-                size="sm"
-                onClick={() => setResetConfirm(true)}
-                className="text-slate-400 hover:text-rose-300 self-start text-xs"
-              >
-                Reset memories to default preset
-              </GlassButton>
-            ) : (
-              <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-between">
-                <span className="text-xs text-rose-300 flex items-center gap-1.5">
-                  <AlertTriangle className="w-4 h-4" /> Reset all local memories?
-                </span>
-                <div className="flex gap-2">
-                  <GlassButton size="sm" variant="ghost" onClick={() => setResetConfirm(false)}>Cancel</GlassButton>
-                  <GlassButton size="sm" variant="danger" onClick={handleResetData}>Confirm Reset</GlassButton>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       )}

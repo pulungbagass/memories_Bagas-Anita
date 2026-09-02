@@ -31,7 +31,7 @@ export default function App() {
   const [letters, setLetters] = useState<LoveLetter[]>(() => memoryStorage.getLetters());
   const [notes, setNotes] = useState<StickyNote[]>(() => memoryStorage.getNotes());
   const [audios, setAudios] = useState<AudioMemory[]>(() => memoryStorage.getAudios());
-  const [milestones] = useState<TimelineMilestone[]>(() => memoryStorage.getMilestones());
+  const [milestones, setMilestones] = useState<TimelineMilestone[]>(() => memoryStorage.getMilestones());
 
   // Audio Playback
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
@@ -51,10 +51,11 @@ export default function App() {
     let isMounted = true;
     memoryStorage.syncAllFromDatabase().then((data) => {
       if (!isMounted) return;
-      if (data.gallery && data.gallery.length > 0) setGallery(data.gallery);
-      if (data.letters && data.letters.length > 0) setLetters(data.letters);
-      if (data.notes && data.notes.length > 0) setNotes(data.notes);
-      if (data.audios && data.audios.length > 0) setAudios(data.audios);
+      if (Array.isArray(data.gallery)) setGallery(data.gallery);
+      if (Array.isArray(data.letters)) setLetters(data.letters);
+      if (Array.isArray(data.notes)) setNotes(data.notes);
+      if (Array.isArray(data.audios)) setAudios(data.audios);
+      if (Array.isArray(data.milestones)) setMilestones(data.milestones);
     });
 
     return () => {
@@ -68,6 +69,7 @@ export default function App() {
     setLetters(data.letters || memoryStorage.getLetters());
     setNotes(data.notes || memoryStorage.getNotes());
     setAudios(data.audios || memoryStorage.getAudios());
+    setMilestones(data.milestones || memoryStorage.getMilestones());
   };
 
   // Auth Handlers
@@ -84,7 +86,7 @@ export default function App() {
     setIsPlaying(false);
   };
 
-  // CRUD Handlers - Gallery (Optimistic UI + Supabase Sync)
+  // CRUD Handlers - Gallery
   const handleAddMedia = (newItem: GalleryItem) => {
     setGallery((prev) => [newItem, ...prev.filter(g => g.id !== newItem.id)]);
     memoryStorage.addGalleryItemAsync(newItem);
@@ -103,7 +105,7 @@ export default function App() {
     memoryStorage.updateGalleryItemAsync(updatedItem);
   };
 
-  // CRUD Handlers - Letters (Optimistic UI + Supabase Sync)
+  // CRUD Handlers - Letters
   const handleSaveLetter = (letter: LoveLetter) => {
     if (editLetter) {
       setLetters((prev) => prev.map((l) => (l.id === letter.id ? letter : l)));
@@ -120,7 +122,7 @@ export default function App() {
     memoryStorage.deleteLetterAsync(id);
   };
 
-  // CRUD Handlers - Notes (Optimistic UI + Supabase Sync)
+  // CRUD Handlers - Notes
   const handleSaveNote = (note: StickyNote) => {
     if (editNote) {
       setNotes((prev) => prev.map((n) => (n.id === note.id ? note : n)));
@@ -145,7 +147,7 @@ export default function App() {
     memoryStorage.updateNoteAsync(updatedNote);
   };
 
-  // CRUD Handlers - Audios (Optimistic UI + Supabase Sync)
+  // CRUD Handlers - Audios
   const handleAddAudio = (newAudio: AudioMemory) => {
     setAudios((prev) => [newAudio, ...prev.filter(a => a.id !== newAudio.id)]);
     memoryStorage.addAudioAsync(newAudio);
@@ -156,8 +158,24 @@ export default function App() {
     memoryStorage.deleteAudioAsync(id);
   };
 
+  // CRUD Handlers - Milestones / Story
+  const handleAddMilestone = (newMilestone: TimelineMilestone) => {
+    setMilestones((prev) => [newMilestone, ...prev.filter(m => m.id !== newMilestone.id)]);
+    memoryStorage.addMilestoneAsync(newMilestone);
+  };
+
+  const handleEditMilestone = (updatedMilestone: TimelineMilestone) => {
+    setMilestones((prev) => prev.map((m) => (m.id === updatedMilestone.id ? updatedMilestone : m)));
+    memoryStorage.updateMilestoneAsync(updatedMilestone);
+  };
+
+  const handleDeleteMilestone = (id: string) => {
+    setMilestones((prev) => prev.filter((m) => m.id !== id));
+    memoryStorage.deleteMilestoneAsync(id);
+  };
+
   // Generic Open Creator
-  const handleOpenCreator = (type?: 'media' | 'letter' | 'note' | 'audio') => {
+  const handleOpenCreator = (type?: 'media' | 'letter' | 'note' | 'audio' | 'story') => {
     if (type === 'letter') {
       setEditLetter(null);
       setIsLetterModalOpen(true);
@@ -166,6 +184,8 @@ export default function App() {
       setIsNoteModalOpen(true);
     } else if (type === 'audio') {
       setIsAudioModalOpen(true);
+    } else if (type === 'story') {
+      setCurrentTab('timeline');
     } else {
       setIsUploadOpen(true);
     }
@@ -184,7 +204,7 @@ export default function App() {
         />
       )}
 
-      {/* 3. Main Views & Route Transitions */}
+      {/* 2. Main Views & Route Transitions */}
       <main className="relative z-10">
         {!isAuthenticated ? (
           /* Isolated Dedicated Login Page */
@@ -205,7 +225,7 @@ export default function App() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.25 }}
+              transition={{ duration: 0.2 }}
             >
               {currentTab === 'home' && (
                 <HomePage
@@ -215,10 +235,10 @@ export default function App() {
                   audios={audios}
                   onNavigate={setCurrentTab}
                   onOpenUpload={handleOpenCreator}
-                  onSelectLetter={(l) => {
+                  onSelectLetter={() => {
                     setCurrentTab('letters');
                   }}
-                  onSelectMedia={(m) => {
+                  onSelectMedia={() => {
                     setCurrentTab('gallery');
                   }}
                 />
@@ -280,14 +300,21 @@ export default function App() {
               )}
 
               {currentTab === 'timeline' && (
-                <TimelinePage milestones={milestones} />
+                <TimelinePage
+                  gallery={gallery}
+                  letters={letters}
+                  notes={notes}
+                  audios={audios}
+                  milestones={milestones}
+                  onOpenUpload={handleOpenCreator}
+                />
               )}
             </motion.div>
           </AnimatePresence>
         )}
       </main>
 
-      {/* 4. Floating Glassmorphism Navigation Bar */}
+      {/* 3. Floating Glassmorphism Navigation Bar */}
       {isAuthenticated && !showWelcome && (
         <FloatingNavBar
           currentTab={currentTab}
@@ -298,7 +325,7 @@ export default function App() {
         />
       )}
 
-      {/* 5. Modals & Forms */}
+      {/* 4. Modals & Forms */}
       <UploadModal
         isOpen={isUploadOpen}
         onClose={() => setIsUploadOpen(false)}

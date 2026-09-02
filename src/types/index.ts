@@ -51,6 +51,8 @@ export interface AudioMemory {
   duration?: string;
   author: AuthorType;
   type: 'song' | 'voicenote';
+  platform?: 'youtube' | 'spotify' | 'tiktok' | 'instagram' | 'soundcloud' | 'upload' | 'direct';
+  embedUrl?: string;
   date: string;
   coverUrl?: string;
   description?: string;
@@ -66,6 +68,26 @@ export interface TimelineMilestone {
   photoUrl?: string;
   location?: string;
   category: string;
+}
+
+export type StoryItemType = 'gallery' | 'letter' | 'note' | 'audio' | 'milestone';
+
+export interface UnifiedStoryItem {
+  id: string;
+  itemType: StoryItemType;
+  title: string;
+  date: string;
+  description: string;
+  emoji: string;
+  badge: string;
+  author: string;
+  location?: string;
+  photoUrl?: string;
+  videoUrl?: string;
+  audioUrl?: string;
+  category?: string;
+  createdAt: string;
+  rawItem: GalleryItem | LoveLetter | StickyNote | AudioMemory | TimelineMilestone;
 }
 
 export interface AppConfig {
