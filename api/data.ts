@@ -79,7 +79,12 @@ export default async function handler(req: any, res: any) {
     return res.status(200).end();
   }
 
-  const hasPostgres = Boolean(process.env.POSTGRES_URL || process.env.POSTGRES_PRISMA_URL);
+  const hasPostgres = Boolean(
+    (process.env.POSTGRES_URL && process.env.POSTGRES_URL.trim().length > 0) || 
+    (process.env.POSTGRES_PRISMA_URL && process.env.POSTGRES_PRISMA_URL.trim().length > 0) ||
+    (process.env.DATABASE_URL && process.env.DATABASE_URL.trim().length > 0) ||
+    (process.env.POSTGRES_URL_NON_POOLING && process.env.POSTGRES_URL_NON_POOLING.trim().length > 0)
+  );
 
   // 1. GET: Fetch all persistent data from Vercel Postgres
   if (req.method === 'GET') {

@@ -15,9 +15,20 @@ export default async function handler(req: any, res: any) {
   let dbError: string | null = null;
   let tablesFound: string[] = [];
 
-  const hasPostgres = Boolean(process.env.POSTGRES_URL || process.env.POSTGRES_PRISMA_URL);
-  const token = process.env.BLOB_READ_WRITE_TOKEN || '';
-  const hasBlobToken = Boolean(token);
+  const postgresUrl = 
+    process.env.POSTGRES_URL?.trim() || 
+    process.env.POSTGRES_PRISMA_URL?.trim() || 
+    process.env.DATABASE_URL?.trim() || 
+    process.env.POSTGRES_URL_NON_POOLING?.trim() || 
+    '';
+
+  const token = 
+    process.env.BLOB_READ_WRITE_TOKEN?.trim() || 
+    process.env.VERCEL_BLOB_TOKEN?.trim() || 
+    '';
+
+  const hasPostgres = Boolean(postgresUrl && postgresUrl.length > 0);
+  const hasBlobToken = Boolean(token && token.length > 0);
 
   if (hasPostgres) {
     try {
