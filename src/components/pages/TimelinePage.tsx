@@ -9,7 +9,8 @@ import {
   ArrowUpDown, 
   ChevronRight,
   Eye,
-  Plus
+  Plus,
+  Clock
 } from 'lucide-react';
 import { GlassCard } from '../ui/GlassCard';
 import { GlassButton } from '../ui/GlassButton';
@@ -33,6 +34,62 @@ interface TimelinePageProps {
   onOpenUpload?: (type?: 'media' | 'letter' | 'note' | 'audio') => void;
 }
 
+/**
+ * Extracts a high-precision millisecond timestamp from story item,
+ * taking into account Year, Month, Day, Hour, Minute, and Second (Full Timestamp).
+ */
+export function getStoryTimestamp(item: UnifiedStoryItem): number {
+  if (item.createdAt) {
+    const time = new Date(item.createdAt).getTime();
+    if (!isNaN(time) && time > 0) return time;
+  }
+  if (item.rawItem && 'createdAt' in item.rawItem && (item.rawItem as any).createdAt) {
+    const time = new Date((item.rawItem as any).createdAt).getTime();
+    if (!isNaN(time) && time > 0) return time;
+  }
+  // Check if item id contains timestamp digits (e.g. gal_1712345678901)
+  const match = item.id.match(/\d{10,13}/);
+  if (match) {
+    const num = parseInt(match[0], 10);
+    if (!isNaN(num) && num > 1000000000) return num;
+  }
+  if (item.date) {
+    const time = new Date(item.date).getTime();
+    if (!isNaN(time) && time > 0) return time;
+  }
+  return 0;
+}
+
+/**
+ * Formats a story timestamp gracefully, showing date and hours:minutes:seconds when available.
+ */
+export function formatStoryTimestamp(createdAt?: string, dateStr?: string): string {
+  const source = createdAt || dateStr;
+  if (!source) return 'Momen Kenangan';
+
+  const d = new Date(source);
+  if (isNaN(d.getTime())) return dateStr || source;
+
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+  const day = d.getDate();
+  const month = months[d.getMonth()];
+  const year = d.getFullYear();
+
+  // If timestamp contains hours/minutes/seconds
+  const hours = d.getHours();
+  const minutes = d.getMinutes();
+  const seconds = d.getSeconds();
+
+  if (hours !== 0 || minutes !== 0 || seconds !== 0) {
+    const h = String(hours).padStart(2, '0');
+    const m = String(minutes).padStart(2, '0');
+    const s = String(seconds).padStart(2, '0');
+    return `${day} ${month} ${year} • ${h}:${m}:${s}`;
+  }
+
+  return `${day} ${month} ${year}`;
+}
+
 export const TimelinePage: React.FC<TimelinePageProps> = ({
   gallery,
   letters,
@@ -43,7 +100,7 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
 }) => {
   const [selectedTypeFilter, setSelectedTypeFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc'); // desc = newest first
+  const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc'); // desc = newest first (Descendant)
   const [selectedStory, setSelectedStory] = useState<UnifiedStoryItem | null>(null);
 
   // Automatically aggregate ALL memory items into a unified story feed in real-time
@@ -53,6 +110,7 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
     // 1. Gallery items
     gallery.forEach((g) => {
       const isVideo = g.mediaType === 'video';
+      const accurateCreatedAt = g.createdAt || (g.date ? new Date(g.date).toISOString() : new Date().toISOString());
       list.push({
         id: `story_gal_${g.id}`,
         itemType: 'gallery',
@@ -66,13 +124,14 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
         photoUrl: !isVideo ? g.url : undefined,
         videoUrl: isVideo ? g.url : undefined,
         category: g.category,
-        createdAt: g.createdAt || g.date,
+        createdAt: accurateCreatedAt,
         rawItem: g
       });
     });
 
     // 2. Love Letters
     letters.forEach((l) => {
+      const accurateCreatedAt = l.createdAt || (l.date ? new Date(l.date).toISOString() : new Date().toISOString());
       list.push({
         id: `story_let_${l.id}`,
         itemType: 'letter',
@@ -83,13 +142,14 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
         badge: 'Surat Cinta',
         author: `${l.sender} ➔ ${l.recipient}`,
         category: 'Surat Cinta',
-        createdAt: l.createdAt || l.date,
+        createdAt: accurateCreatedAt,
         rawItem: l
       });
     });
 
     // 3. Sticky Notes
     notes.forEach((n) => {
+      const accurateCreatedAt = n.createdAt || (n.date ? new Date(n.date).toISOString() : new Date().toISOString());
       list.push({
         id: `story_note_${n.id}`,
         itemType: 'note',
@@ -100,7 +160,7 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
         badge: 'Sticky Note',
         author: n.author,
         category: 'Catatan Kecil',
-        createdAt: n.createdAt || n.date,
+        createdAt: accurateCreatedAt,
         rawItem: n
       });
     });
@@ -108,6 +168,7 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
     // 4. Audio & Music
     audios.forEach((a) => {
       const isVoice = a.type === 'voicenote';
+      const accurateCreatedAt = a.createdAt || (a.date ? new Date(a.date).toISOString() : new Date().toISOString());
       list.push({
         id: `story_aud_${a.id}`,
         itemType: 'audio',
@@ -119,13 +180,14 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
         author: a.author,
         audioUrl: a.url,
         category: 'Musik & Audio',
-        createdAt: a.createdAt || a.date,
+        createdAt: accurateCreatedAt,
         rawItem: a
       });
     });
 
     // 5. Custom Milestones (if any)
     milestones.forEach((m) => {
+      const accurateCreatedAt = m.createdAt || (m.date ? new Date(m.date).toISOString() : new Date().toISOString());
       list.push({
         id: `story_mil_${m.id}`,
         itemType: 'milestone',
@@ -138,16 +200,30 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
         location: m.location,
         photoUrl: m.photoUrl,
         category: m.category,
-        createdAt: m.date,
+        createdAt: accurateCreatedAt,
         rawItem: m
       });
     });
 
-    // Sort by Date
+    // High Precision Sorting: Tanggal, Bulan, Tahun, Jam, Menit, dan Detik (Full Timestamp)
     return list.sort((a, b) => {
-      const dateA = new Date(a.date || a.createdAt).getTime();
-      const dateB = new Date(b.date || b.createdAt).getTime();
-      return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
+      const timeA = new Date(a.createdAt).getTime();
+      const timeB = new Date(b.createdAt).getTime();
+
+      if (!isNaN(timeA) && !isNaN(timeB) && timeA !== timeB) {
+        // Descending (newest first): timeB - timeA; Ascending: timeA - timeB
+        return sortOrder === 'desc' ? timeB - timeA : timeA - timeB;
+      }
+
+      // Robust fallback if createdAt was not in ISO string format
+      const preciseA = getStoryTimestamp(a);
+      const preciseB = getStoryTimestamp(b);
+      if (preciseA !== preciseB) {
+        return sortOrder === 'desc' ? preciseB - preciseA : preciseA - preciseB;
+      }
+
+      // Deterministic tie-breaker
+      return sortOrder === 'desc' ? b.id.localeCompare(a.id) : a.id.localeCompare(b.id);
     });
   }, [gallery, letters, notes, audios, milestones, sortOrder]);
 
@@ -179,126 +255,123 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
   return (
     <div className="space-y-6 pb-28 pt-2 max-w-3xl mx-auto px-4 sm:px-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-3 border-b border-slate-800">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
         <div>
-          <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-pink-500/15 border border-pink-500/30 text-xs font-semibold text-pink-300">
-            <Sparkles className="w-3.5 h-3.5 text-pink-400" />
-            <span>Real-time Auto Story Timeline</span>
+          <div className="flex items-center gap-1.5 text-pink-400 text-xs font-semibold uppercase tracking-wider">
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Kisah Perjalanan Cinta</span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-serif-display text-white tracking-tight mt-1">
-            Rangkuman Kisah Kita 📖✨
+          <h1 className="text-2xl sm:text-3xl font-serif-display text-white tracking-tight mt-0.5">
+            Story Timeline Kita ✨
           </h1>
-          <p className="text-slate-400 text-xs sm:text-sm mt-0.5">
-            Setiap foto, video, surat, catatan, dan lagu terangkum otomatis di timeline ini secara real-time.
+          <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
+            Semua foto, video, surat cinta, sticky notes, dan lagu romantis terangkum otomatis sesuai urutan waktu presisi.
           </p>
         </div>
 
         {onOpenUpload && (
           <GlassButton
             variant="primary"
-            size="sm"
             onClick={() => onOpenUpload('media')}
             icon={<Plus className="w-4 h-4" />}
             className="shrink-0 shadow-md"
           >
-            Tambah Kenangan
+            Tambah Momen Baru
           </GlassButton>
         )}
       </div>
 
-      {/* Filter Chips & Search Bar */}
-      {allStoryItems.length > 0 && (
-        <div className="space-y-3">
-          {/* Search & Sort Row */}
-          <div className="flex items-center gap-2">
-            <div className="relative flex-1">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Cari cerita, pesan cinta, atau momen..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-3.5 py-2 rounded-xl text-xs sm:text-sm glass-input bg-[#131328] placeholder:text-slate-500"
-              />
-            </div>
-
-            <button
-              onClick={() => setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}
-              className="px-3 py-2 rounded-xl bg-[#131328] border border-slate-700 text-xs text-slate-300 hover:text-white flex items-center gap-1.5 cursor-pointer shrink-0 transition-colors"
-              title={sortOrder === 'desc' ? 'Urutkan dari terlama' : 'Urutkan dari terbaru'}
-            >
-              <ArrowUpDown className="w-3.5 h-3.5 text-pink-400" />
-              <span className="hidden sm:inline">
-                {sortOrder === 'desc' ? 'Terbaru' : 'Awal Kisah'}
-              </span>
-            </button>
-          </div>
-
+      {/* Filter Tabs & Search Bar */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
           {/* Type Filter Buttons */}
-          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 whitespace-nowrap">
+          <div className="flex items-center gap-1.5 flex-wrap">
             {[
-              { id: 'all', label: '🌟 Semua Momen', count: typeCounts.all },
-              { id: 'gallery', label: '📸 Galeri Foto & Video', count: typeCounts.gallery },
-              { id: 'letter', label: '💌 Surat Cinta', count: typeCounts.letter },
-              { id: 'note', label: '📌 Catatan / Notes', count: typeCounts.note },
-              { id: 'audio', label: '🎵 Musik & Lagu', count: typeCounts.audio },
-            ].map((btn) => (
+              { id: 'all', label: 'Semua Momen', count: typeCounts.all },
+              { id: 'gallery', label: '📸 Galeri', count: typeCounts.gallery },
+              { id: 'letter', label: '💌 Surat', count: typeCounts.letter },
+              { id: 'note', label: '📌 Notes', count: typeCounts.note },
+              { id: 'audio', label: '🎵 Musik', count: typeCounts.audio },
+            ].map((tab) => (
               <button
-                key={btn.id}
-                onClick={() => setSelectedTypeFilter(btn.id)}
-                className={`
-                  px-3 py-1.5 rounded-full text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 shrink-0
-                  ${selectedTypeFilter === btn.id
+                key={tab.id}
+                onClick={() => setSelectedTypeFilter(tab.id)}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors cursor-pointer flex items-center gap-1.5 ${
+                  selectedTypeFilter === tab.id
                     ? 'bg-pink-500 text-white font-semibold shadow-sm'
-                    : 'bg-[#131328] text-slate-300 hover:text-white border border-slate-800'
-                  }
-                `}
+                    : 'bg-[#14142b] text-slate-300 hover:text-white border border-slate-800'
+                }`}
               >
-                <span>{btn.label}</span>
-                <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${selectedTypeFilter === btn.id ? 'bg-white/20 text-white' : 'bg-white/5 text-slate-400'}`}>
-                  {btn.count}
+                <span>{tab.label}</span>
+                <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+                  selectedTypeFilter === tab.id ? 'bg-black/20 text-white' : 'bg-slate-800 text-slate-400'
+                }`}>
+                  {tab.count}
                 </span>
               </button>
             ))}
           </div>
-        </div>
-      )}
 
-      {/* Empty State */}
-      {allStoryItems.length === 0 ? (
-        <div className="text-center py-16 px-4 space-y-4 rounded-2xl border border-dashed border-slate-800 bg-[#131328]/60">
-          <div className="w-14 h-14 rounded-2xl bg-pink-500/10 border border-pink-500/20 text-pink-400 flex items-center justify-center mx-auto text-2xl">
-            <Heart className="w-7 h-7 text-pink-400 animate-pulse" />
-          </div>
-          <div className="space-y-1.5 max-w-sm mx-auto">
-            <h3 className="text-lg font-serif-display text-white font-medium">
-              Belum Ada Momen Tercatat
-            </h3>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              Tambahkan foto di galeri, tulis surat cinta, buat sticky note, atau masukkan lagu kenangan. Semuanya akan otomatis terangkum rapi di menu Story ini!
-            </p>
-          </div>
-          {onOpenUpload && (
-            <div className="flex justify-center gap-2 pt-2">
-              <GlassButton
-                onClick={() => onOpenUpload('media')}
-                variant="primary"
-                size="sm"
-                icon={<Plus className="w-4 h-4" />}
-              >
-                Mulai Tambah Kenangan
-              </GlassButton>
-            </div>
+          {/* Sort Order Toggle */}
+          <button
+            onClick={() => setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#14142b] border border-slate-800 text-slate-300 hover:text-white text-xs transition-colors cursor-pointer shadow-sm"
+            title="Klik untuk mengubah urutan waktu"
+          >
+            <ArrowUpDown className="w-3.5 h-3.5 text-pink-400" />
+            <span>{sortOrder === 'desc' ? 'Terbaru di Atas' : 'Terlama di Atas'}</span>
+          </button>
+        </div>
+
+        {/* Search Bar */}
+        <div className="relative">
+          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Cari cerita, judul, pesan, lokasi, atau penulis kenangan..."
+            className="w-full pl-9 pr-4 py-2 bg-[#131328] border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-pink-500/50"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-white"
+            >
+              ✕
+            </button>
           )}
         </div>
-      ) : filteredStories.length === 0 ? (
-        <div className="text-center py-12 px-4 rounded-2xl bg-[#131328] border border-slate-800">
-          <p className="text-sm text-slate-300">Tidak ada momen yang cocok dengan pencarian / filter.</p>
+      </div>
+
+      {/* Story Timeline Items */}
+      {filteredStories.length === 0 ? (
+        <div className="py-16 text-center rounded-2xl bg-[#131328] border border-dashed border-slate-800 p-6 space-y-3">
+          <div className="w-12 h-12 rounded-xl bg-pink-500/10 border border-pink-500/20 text-pink-400 flex items-center justify-center mx-auto text-2xl">
+            ✨
+          </div>
+          <div>
+            <h3 className="text-base font-semibold text-white">Tidak Ada Cerita Ditemukan</h3>
+            <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
+              {searchQuery
+                ? 'Tidak ada momen kenangan yang cocok dengan kata kunci pencarianmu.'
+                : 'Belum ada momen kenangan yang ditambahkan. Mulai upload foto, tulis surat cinta, atau tempelkan sticky note!'}
+            </p>
+          </div>
+          {onOpenUpload && !searchQuery && (
+            <GlassButton
+              variant="primary"
+              size="sm"
+              onClick={() => onOpenUpload('media')}
+              icon={<Plus className="w-4 h-4" />}
+            >
+              Buat Kenangan Pertama
+            </GlassButton>
+          )}
         </div>
       ) : (
-        /* The Rich Vertical Timeline */
         <div className="relative pl-6 sm:pl-8 border-l-2 border-pink-500/30 space-y-6">
-          {filteredStories.map((item, idx) => {
+          {filteredStories.map((item) => {
             const badgeBg =
               item.itemType === 'gallery' ? 'bg-pink-500/20 text-pink-300 border-pink-500/40' :
               item.itemType === 'letter' ? 'bg-rose-500/20 text-rose-300 border-rose-500/40' :
@@ -327,7 +400,7 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
                   className="p-4 sm:p-5 border-slate-800 hover:border-pink-500/40 transition-all cursor-pointer bg-[#131328] group-hover:bg-[#161630]"
                 >
                   <div className="flex flex-col gap-3">
-                    {/* Top Row: Badge, Emoji & Date */}
+                    {/* Top Row: Badge, Emoji & High-Precision Timestamp */}
                     <div className="flex items-center justify-between gap-2 flex-wrap">
                       <div className="flex items-center gap-2">
                         <span className="text-xl">{item.emoji}</span>
@@ -336,9 +409,9 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
                         </span>
                       </div>
 
-                      <div className="flex items-center gap-1 text-xs font-mono text-slate-400">
-                        <Calendar className="w-3.5 h-3.5 text-pink-400" />
-                        <span>{item.date}</span>
+                      <div className="flex items-center gap-1.5 text-xs font-mono text-slate-300 bg-white/5 px-2 py-0.5 rounded-md border border-white/5">
+                        <Clock className="w-3.5 h-3.5 text-pink-400" />
+                        <span>{formatStoryTimestamp(item.createdAt, item.date)}</span>
                       </div>
                     </div>
 

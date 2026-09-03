@@ -20,93 +20,51 @@ import { GlassCard } from '../ui/GlassCard';
 import { GlassButton } from '../ui/GlassButton';
 import { GlassModal } from '../ui/GlassModal';
 import { AudioMemory } from '../../types';
+import { useAudio } from '../../context/AudioContext';
+import { formatAudioTime } from '../../lib/audioUtils';
 
 interface MusicPageProps {
-  audios: AudioMemory[];
-  currentTrackIndex: number;
-  isPlaying: boolean;
-  onPlayTrack: (index: number) => void;
-  onTogglePlay: () => void;
+  audios?: AudioMemory[];
+  currentTrackIndex?: number;
+  isPlaying?: boolean;
+  onPlayTrack?: (index: number) => void;
+  onTogglePlay?: () => void;
   onOpenUpload: () => void;
   onDeleteAudio: (id: string) => void;
 }
 
 export const MusicPage: React.FC<MusicPageProps> = ({
-  audios,
-  currentTrackIndex,
-  isPlaying,
-  onPlayTrack,
-  onTogglePlay,
   onOpenUpload,
   onDeleteAudio
 }) => {
+  const {
+    tracks,
+    currentTrackIndex,
+    currentTrack,
+    isPlaying,
+    currentTime,
+    duration,
+    isSeeking,
+    progressPercent,
+    playTrack,
+    togglePlay,
+    nextTrack,
+    prevTrack,
+    startSeeking,
+    seekProgress,
+    commitSeek,
+    openVideoPlayer,
+  } = useAudio();
+
   const [filterType, setFilterType] = useState<'all' | 'song' | 'voicenote'>('all');
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(180);
-  const [isSeeking, setIsSeeking] = useState(false);
 
-  // Sync timeline from master player
-  React.useEffect(() => {
-    const handleTimeSync = (e: any) => {
-      if (!isSeeking && e.detail) {
-        if (typeof e.detail.currentTime === 'number') {
-          setCurrentTime(e.detail.currentTime);
-        }
-        if (typeof e.detail.duration === 'number' && e.detail.duration > 0) {
-          setDuration(e.detail.duration);
-        }
-      }
-    };
-    window.addEventListener('bagas_anita_time_sync', handleTimeSync);
-    return () => window.removeEventListener('bagas_anita_time_sync', handleTimeSync);
-  }, [isSeeking]);
-
-  // Reset local timeline on track change
-  React.useEffect(() => {
-    setCurrentTime(0);
-    setDuration(180);
-    setIsSeeking(false);
-  }, [currentTrackIndex]);
-
-  const formatTime = (seconds: number): string => {
-    if (isNaN(seconds) || seconds < 0) return '0:00';
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
-  };
-
-  const handleSeekCommit = (targetSec: number) => {
-    setIsSeeking(false);
-    setCurrentTime(targetSec);
-    window.dispatchEvent(new CustomEvent('bagas_anita_seek_audio', {
-      detail: { targetSeconds: targetSec }
-    }));
-  };
-
-  const filteredAudios = audios.filter((a) => {
+  const filteredAudios = tracks.filter((a) => {
     if (filterType === 'all') return true;
     return a.type === filterType;
   });
 
-  const activeAudio = audios[currentTrackIndex] || audios[0];
-
-  const handleNext = () => {
-    if (audios.length > 0) {
-      onPlayTrack((currentTrackIndex + 1) % audios.length);
-    }
-  };
-
-  const handlePrev = () => {
-    if (audios.length > 0) {
-      onPlayTrack((currentTrackIndex - 1 + audios.length) % audios.length);
-    }
-  };
-
-  // Trigger floating player to expand and show the video visual
-  const handleOpenFloatingVideo = () => {
-    window.dispatchEvent(new CustomEvent('bagas_anita_show_video'));
-  };
+  const activeAudio = currentTrack || tracks[0];
 
   const getPlatformBadge = (audio: AudioMemory) => {
     const url = audio.url || '';
@@ -167,8 +125,8 @@ export const MusicPage: React.FC<MusicPageProps> = ({
 
       {/* 
         Featured Player Controller Deck:
-        Acts as the dedicated controller for the single audio master player.
-        Contains rotating vinyl visual & equalizer animation without mounting a duplicate audio stream!
+        100% Synchronized with Floating Audio Player and Global State via AudioContext.
+        Contains rotating vinyl visual without mounting duplicate audio streams.
       */}
       {activeAudio && (
         <GlassCard className="p-5 sm:p-7 border-purple-500/40 bg-gradient-to-br from-[#181433]/90 to-[#121026]/90 space-y-5 shadow-xl shadow-purple-950/20">
@@ -219,7 +177,7 @@ export const MusicPage: React.FC<MusicPageProps> = ({
               />
             </div>
 
-            {/* Track Info & Visualizer */}
+            {/* Track Info */}
             <div className="flex-1 text-center sm:text-left min-w-0 space-y-1.5">
               <div className="flex items-center justify-center sm:justify-start gap-2">
                 <span className="text-[10px] uppercase tracking-widest text-purple-400 font-bold flex items-center gap-1">
@@ -248,7 +206,7 @@ export const MusicPage: React.FC<MusicPageProps> = ({
             <div className="flex flex-col items-center gap-3 shrink-0">
               <div className="flex items-center gap-2">
                 <button
-                  onClick={handlePrev}
+                  onClick={prevTrack}
                   className="p-2.5 rounded-full bg-white/5 border border-white/10 text-slate-300 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
                   title="Lagu Sebelumnya"
                 >
@@ -256,7 +214,7 @@ export const MusicPage: React.FC<MusicPageProps> = ({
                 </button>
 
                 <button
-                  onClick={onTogglePlay}
+                  onClick={togglePlay}
                   className="p-4 rounded-full bg-purple-500 text-white hover:bg-purple-400 shadow-lg shadow-purple-500/40 hover:scale-105 active:scale-95 transition-all cursor-pointer"
                   aria-label="Toggle playback"
                   title={isPlaying ? 'Pause lagu' : 'Putar lagu'}
@@ -269,7 +227,7 @@ export const MusicPage: React.FC<MusicPageProps> = ({
                 </button>
 
                 <button
-                  onClick={handleNext}
+                  onClick={nextTrack}
                   className="p-2.5 rounded-full bg-white/5 border border-white/10 text-slate-300 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
                   title="Lagu Berikutnya"
                 >
@@ -280,7 +238,7 @@ export const MusicPage: React.FC<MusicPageProps> = ({
               {/* Action: Open Visual Video in Floating Player */}
               <div className="flex items-center gap-2">
                 <button
-                  onClick={handleOpenFloatingVideo}
+                  onClick={openVideoPlayer}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-950/60 hover:bg-purple-900/60 border border-purple-500/40 text-purple-200 text-xs font-medium transition-all hover:scale-102 cursor-pointer shadow-sm"
                   title="Buka pemutar video visual di widget floating"
                 >
@@ -303,13 +261,13 @@ export const MusicPage: React.FC<MusicPageProps> = ({
             </div>
           </div>
 
-          {/* Interactive Timeline Slidebar Controller Deck */}
+          {/* Interactive Timeline Slidebar Controller Deck (Synchronized 100%) */}
           <div className="pt-2 border-t border-white/10 space-y-1.5">
             <div className="flex items-center justify-between text-xs text-slate-400 font-mono px-0.5">
               <div className="flex items-center gap-1.5 text-purple-300 font-semibold">
-                <span>{formatTime(currentTime)}</span>
+                <span>{formatAudioTime(currentTime)}</span>
                 <span className="text-slate-600 font-normal">/</span>
-                <span className="text-slate-400 font-normal">{formatTime(duration)}</span>
+                <span className="text-slate-400 font-normal">{formatAudioTime(duration)}</span>
               </div>
               <span className="text-[10px] text-purple-300/80 font-sans">
                 {isSeeking ? 'Menggeser timeline...' : isPlaying ? 'Sedang diputar' : 'Dijeda'}
@@ -323,21 +281,14 @@ export const MusicPage: React.FC<MusicPageProps> = ({
                 max={duration > 0 ? duration : 180}
                 step={1}
                 value={currentTime}
-                onMouseDown={() => setIsSeeking(true)}
-                onTouchStart={() => setIsSeeking(true)}
-                onChange={(e) => {
-                  const val = parseFloat(e.target.value);
-                  setCurrentTime(val);
-                }}
-                onMouseUp={(e) => handleSeekCommit(parseFloat((e.target as HTMLInputElement).value))}
-                onTouchEnd={(e) => handleSeekCommit(parseFloat((e.target as HTMLInputElement).value))}
+                onMouseDown={startSeeking}
+                onTouchStart={startSeeking}
+                onChange={(e) => seekProgress(parseFloat(e.target.value))}
+                onMouseUp={(e) => commitSeek(parseFloat((e.target as HTMLInputElement).value))}
+                onTouchEnd={(e) => commitSeek(parseFloat((e.target as HTMLInputElement).value))}
                 className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-purple-400 hover:accent-purple-300 group-hover:h-2.5 transition-all"
                 style={{
-                  background: `linear-gradient(to right, #a855f7 ${
-                    duration > 0 ? Math.min(100, Math.max(0, (currentTime / duration) * 100)) : 0
-                  }%, #1e1e38 ${
-                    duration > 0 ? Math.min(100, Math.max(0, (currentTime / duration) * 100)) : 0
-                  }%)`
+                  background: `linear-gradient(to right, #a855f7 ${progressPercent}%, #1e1e38 ${progressPercent}%)`
                 }}
               />
             </div>
@@ -347,10 +298,10 @@ export const MusicPage: React.FC<MusicPageProps> = ({
           <div className="flex items-center justify-between pt-3 border-t border-white/10 text-[11px] text-slate-400">
             <div className="flex items-center gap-1.5 text-purple-300">
               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Satu Sumber Suara Aktif (Single-Player Master • Bebas Dobel Suara)</span>
+              <span>Satu Sumber Suara Sinkron (Global AudioContext Engine • Bebas Dobel Suara)</span>
             </div>
-            <span className="text-slate-400">
-              Lagu {currentTrackIndex + 1} dari {audios.length}
+            <span className="text-slate-400 font-mono">
+              Lagu {currentTrackIndex + 1} dari {tracks.length}
             </span>
           </div>
         </GlassCard>
@@ -397,17 +348,17 @@ export const MusicPage: React.FC<MusicPageProps> = ({
       ) : (
         <div className="space-y-2.5">
           {filteredAudios.map((audio) => {
-            const isThisPlaying = isPlaying && audios[currentTrackIndex]?.id === audio.id;
+            const isThisPlaying = isPlaying && tracks[currentTrackIndex]?.id === audio.id;
             return (
               <div
                 key={audio.id}
                 onClick={() => {
-                  const globalIdx = audios.findIndex((a) => a.id === audio.id);
+                  const globalIdx = tracks.findIndex((a) => a.id === audio.id);
                   if (globalIdx !== -1) {
                     if (currentTrackIndex === globalIdx) {
-                      onTogglePlay();
+                      togglePlay();
                     } else {
-                      onPlayTrack(globalIdx);
+                      playTrack(globalIdx);
                     }
                   }
                 }}

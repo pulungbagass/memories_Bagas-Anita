@@ -13,6 +13,7 @@ import {
   ExternalLink
 } from 'lucide-react';
 import { AuthorType, AudioMemory } from '../../types';
+import { fetchMediaMetadataClientSide } from '../../lib/audioUtils';
 
 interface AudioModalProps {
   isOpen: boolean;
@@ -115,33 +116,61 @@ export const AudioModal: React.FC<AudioModalProps> = ({
       setEmbedUrl(`https://w.soundcloud.com/player/?url=${encodeURIComponent(trimmed)}&color=%23a855f7&auto_play=true`);
     }
 
-    // Debounce metadata fetch from server
+    // Debounce metadata fetch from server, with instant client-side oEmbed fallback
     const timeout = setTimeout(async () => {
       setIsLoadingMetadata(true);
+      let resolved = false;
+
+      // 1. Try server-side metadata endpoint (works in Vercel serverless and local Express)
       try {
         const res = await fetch(`/api/media-info?url=${encodeURIComponent(trimmed)}`);
         if (res.ok) {
           const data = await res.json();
-          if (data.title && (!title || title.trim() === '')) {
-            setTitle(data.title);
+          if (data && data.success) {
+            if (data.title && (!title || title.trim() === '')) {
+              setTitle(data.title);
+            }
+            if (data.artist && (!artist || artist.trim() === '' || artist === 'YouTube Creator')) {
+              setArtist(data.artist);
+            }
+            if (data.thumbnailUrl && !coverUrl) {
+              setCoverUrl(data.thumbnailUrl);
+            }
+            if (data.embedUrl) {
+              setEmbedUrl(data.embedUrl);
+            }
+            setMetadataSuccess(true);
+            resolved = true;
           }
-          if (data.artist && (!artist || artist.trim() === '' || artist === 'YouTube Creator')) {
-            setArtist(data.artist);
-          }
-          if (data.thumbnailUrl && !coverUrl) {
-            setCoverUrl(data.thumbnailUrl);
-          }
-          if (data.embedUrl) {
-            setEmbedUrl(data.embedUrl);
-          }
-          setMetadataSuccess(true);
         }
       } catch {
-        // Silent fallback - user can fill manually
-      } finally {
-        setIsLoadingMetadata(false);
+        // Fallback to client-side extraction below
       }
-    }, 500);
+
+      // 2. Client-side fallback if server didn't resolve (e.g. CORS oEmbed)
+      if (!resolved) {
+        try {
+          const clientData = await fetchMediaMetadataClientSide(trimmed);
+          if (clientData) {
+            if (clientData.title && (!title || title.trim() === '')) {
+              setTitle(clientData.title);
+            }
+            if (clientData.artist && (!artist || artist.trim() === '' || artist === 'YouTube Creator')) {
+              setArtist(clientData.artist);
+            }
+            if (clientData.thumbnailUrl && !coverUrl) {
+              setCoverUrl(clientData.thumbnailUrl);
+            }
+            if (clientData.embedUrl) {
+              setEmbedUrl(clientData.embedUrl);
+            }
+            setMetadataSuccess(true);
+          }
+        } catch {}
+      }
+
+      setIsLoadingMetadata(false);
+    }, 400);
 
     return () => clearTimeout(timeout);
   }, [urlInput]);
@@ -171,7 +200,7 @@ export const AudioModal: React.FC<AudioModalProps> = ({
         platformType = 'youtube';
         const vid = getYouTubeVideoId(finalUrl);
         if (vid) {
-          generatedEmbed = `https://www.youtube.com/embed/${vid}?autoplay=1&enablejsapi=1`;
+          generatedEmbed = `https://www.youtube.com/embed/${vid}?autoplay=0&enablejsapi=1`;
         }
       } else if (finalUrl.includes('spotify.com')) {
         platformType = 'spotify';
@@ -185,7 +214,7 @@ export const AudioModal: React.FC<AudioModalProps> = ({
         platformType = 'instagram';
       } else if (finalUrl.includes('soundcloud.com')) {
         platformType = 'soundcloud';
-        generatedEmbed = `https://w.soundcloud.com/player/?url=${encodeURIComponent(finalUrl)}&color=%23a855f7&auto_play=true`;
+        generatedEmbed = `https://w.soundcloud.com/player/?url=${encodeURIComponent(finalUrl)}&color=%23a855f7&auto_play=false`;
       }
 
       const newAudio: AudioMemory = {

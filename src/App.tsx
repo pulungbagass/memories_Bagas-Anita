@@ -19,6 +19,7 @@ import { TimelinePage } from './components/pages/TimelinePage';
 
 import { memoryStorage } from './lib/storage';
 import { GalleryItem, LoveLetter, StickyNote, AudioMemory, TimelineMilestone } from './types';
+import { AudioProvider } from './context/AudioContext';
 
 export default function App() {
   // Session & Navigation
@@ -192,177 +193,165 @@ export default function App() {
   };
 
   return (
-    <div className="relative min-h-screen bg-[#0b0b18] text-white font-sans selection:bg-pink-500/30 selection:text-pink-200 overflow-x-hidden">
-      {/* 1. Top-Right Audio Player Bar (when logged in) */}
-      {isAuthenticated && !showWelcome && (
-        <AudioPlayerBar
-          tracks={audios}
-          currentTrackIndex={currentTrackIndex}
-          onTrackChange={(idx) => setCurrentTrackIndex(idx)}
-          isPlaying={isPlaying}
-          onTogglePlay={() => setIsPlaying(!isPlaying)}
-        />
-      )}
-
-      {/* 2. Main Views & Route Transitions */}
-      <main className="relative z-10">
-        {!isAuthenticated ? (
-          /* Isolated Dedicated Login Page */
-          <LoginPage onLoginSuccess={handleLoginSuccess} />
-        ) : showWelcome ? (
-          /* Dedicated Modular Welcome Page */
-          <WelcomePage
-            onContinue={() => setShowWelcome(false)}
-            startDate="2022-04-16"
-            partner1Name="Bagas"
-            partner2Name="Anita"
-          />
-        ) : (
-          /* Dashboard Layout with floating nav */
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={currentTab}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.2 }}
-            >
-              {currentTab === 'home' && (
-                <HomePage
-                  gallery={gallery}
-                  letters={letters}
-                  notes={notes}
-                  audios={audios}
-                  onNavigate={setCurrentTab}
-                  onOpenUpload={handleOpenCreator}
-                  onSelectLetter={() => {
-                    setCurrentTab('letters');
-                  }}
-                  onSelectMedia={() => {
-                    setCurrentTab('gallery');
-                  }}
-                />
-              )}
-
-              {currentTab === 'gallery' && (
-                <GalleryPage
-                  gallery={gallery}
-                  onOpenUpload={() => setIsUploadOpen(true)}
-                  onDeleteMedia={handleDeleteMedia}
-                  onToggleFavorite={handleToggleFavoriteMedia}
-                />
-              )}
-
-              {currentTab === 'letters' && (
-                <LettersPage
-                  letters={letters}
-                  onOpenCompose={() => {
-                    setEditLetter(null);
-                    setIsLetterModalOpen(true);
-                  }}
-                  onEditLetter={(l) => {
-                    setEditLetter(l);
-                    setIsLetterModalOpen(true);
-                  }}
-                  onDeleteLetter={handleDeleteLetter}
-                />
-              )}
-
-              {currentTab === 'notes' && (
-                <NotesPage
-                  notes={notes}
-                  onOpenCreate={() => {
-                    setEditNote(null);
-                    setIsNoteModalOpen(true);
-                  }}
-                  onEditNote={(n) => {
-                    setEditNote(n);
-                    setIsNoteModalOpen(true);
-                  }}
-                  onDeleteNote={handleDeleteNote}
-                  onTogglePin={handleTogglePinNote}
-                />
-              )}
-
-              {currentTab === 'music' && (
-                <MusicPage
-                  audios={audios}
-                  currentTrackIndex={currentTrackIndex}
-                  isPlaying={isPlaying}
-                  onPlayTrack={(idx) => {
-                    setCurrentTrackIndex(idx);
-                    setIsPlaying(true);
-                  }}
-                  onTogglePlay={() => setIsPlaying(!isPlaying)}
-                  onOpenUpload={() => setIsAudioModalOpen(true)}
-                  onDeleteAudio={handleDeleteAudio}
-                />
-              )}
-
-              {currentTab === 'timeline' && (
-                <TimelinePage
-                  gallery={gallery}
-                  letters={letters}
-                  notes={notes}
-                  audios={audios}
-                  milestones={milestones}
-                  onOpenUpload={handleOpenCreator}
-                />
-              )}
-            </motion.div>
-          </AnimatePresence>
+    <AudioProvider tracks={audios}>
+      <div className="relative min-h-screen bg-[#0b0b18] text-white font-sans selection:bg-pink-500/30 selection:text-pink-200 overflow-x-hidden">
+        {/* 1. Top-Right Audio Player Bar (when logged in) */}
+        {isAuthenticated && !showWelcome && (
+          <AudioPlayerBar />
         )}
-      </main>
 
-      {/* 3. Floating Glassmorphism Navigation Bar */}
-      {isAuthenticated && !showWelcome && (
-        <FloatingNavBar
-          currentTab={currentTab}
-          onTabChange={setCurrentTab}
-          onOpenUpload={handleOpenCreator}
-          onOpenSettings={() => setIsSettingsOpen(true)}
-          onLogout={handleLogout}
+        {/* 2. Main Views & Route Transitions */}
+        <main className="relative z-10">
+          {!isAuthenticated ? (
+            /* Isolated Dedicated Login Page */
+            <LoginPage onLoginSuccess={handleLoginSuccess} />
+          ) : showWelcome ? (
+            /* Dedicated Modular Welcome Page */
+            <WelcomePage
+              onContinue={() => setShowWelcome(false)}
+              startDate="2022-04-16"
+              partner1Name="Bagas"
+              partner2Name="Anita"
+            />
+          ) : (
+            /* Dashboard Layout with floating nav */
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={currentTab}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.2 }}
+              >
+                {currentTab === 'home' && (
+                  <HomePage
+                    gallery={gallery}
+                    letters={letters}
+                    notes={notes}
+                    audios={audios}
+                    onNavigate={setCurrentTab}
+                    onOpenUpload={handleOpenCreator}
+                    onSelectLetter={() => {
+                      setCurrentTab('letters');
+                    }}
+                    onSelectMedia={() => {
+                      setCurrentTab('gallery');
+                    }}
+                  />
+                )}
+
+                {currentTab === 'gallery' && (
+                  <GalleryPage
+                    gallery={gallery}
+                    onOpenUpload={() => setIsUploadOpen(true)}
+                    onDeleteMedia={handleDeleteMedia}
+                    onToggleFavorite={handleToggleFavoriteMedia}
+                  />
+                )}
+
+                {currentTab === 'letters' && (
+                  <LettersPage
+                    letters={letters}
+                    onOpenCompose={() => {
+                      setEditLetter(null);
+                      setIsLetterModalOpen(true);
+                    }}
+                    onEditLetter={(l) => {
+                      setEditLetter(l);
+                      setIsLetterModalOpen(true);
+                    }}
+                    onDeleteLetter={handleDeleteLetter}
+                  />
+                )}
+
+                {currentTab === 'notes' && (
+                  <NotesPage
+                    notes={notes}
+                    onOpenCreate={() => {
+                      setEditNote(null);
+                      setIsNoteModalOpen(true);
+                    }}
+                    onEditNote={(n) => {
+                      setEditNote(n);
+                      setIsNoteModalOpen(true);
+                    }}
+                    onDeleteNote={handleDeleteNote}
+                    onTogglePin={handleTogglePinNote}
+                  />
+                )}
+
+                {currentTab === 'music' && (
+                  <MusicPage
+                    onOpenUpload={() => setIsAudioModalOpen(true)}
+                    onDeleteAudio={handleDeleteAudio}
+                  />
+                )}
+
+                {currentTab === 'timeline' && (
+                  <TimelinePage
+                    gallery={gallery}
+                    letters={letters}
+                    notes={notes}
+                    audios={audios}
+                    milestones={milestones}
+                    onOpenUpload={handleOpenCreator}
+                  />
+                )}
+              </motion.div>
+            </AnimatePresence>
+          )}
+        </main>
+
+        {/* 3. Floating Glassmorphism Navigation Bar */}
+        {isAuthenticated && !showWelcome && (
+          <FloatingNavBar
+            currentTab={currentTab}
+            onTabChange={setCurrentTab}
+            onOpenUpload={handleOpenCreator}
+            onOpenSettings={() => setIsSettingsOpen(true)}
+            onLogout={handleLogout}
+          />
+        )}
+
+        {/* 4. Modals & Forms */}
+        <UploadModal
+          isOpen={isUploadOpen}
+          onClose={() => setIsUploadOpen(false)}
+          onSuccess={handleAddMedia}
         />
-      )}
 
-      {/* 4. Modals & Forms */}
-      <UploadModal
-        isOpen={isUploadOpen}
-        onClose={() => setIsUploadOpen(false)}
-        onSuccess={handleAddMedia}
-      />
+        <LetterModal
+          isOpen={isLetterModalOpen}
+          onClose={() => {
+            setIsLetterModalOpen(false);
+            setEditLetter(null);
+          }}
+          onSuccess={handleSaveLetter}
+          editLetter={editLetter}
+        />
 
-      <LetterModal
-        isOpen={isLetterModalOpen}
-        onClose={() => {
-          setIsLetterModalOpen(false);
-          setEditLetter(null);
-        }}
-        onSuccess={handleSaveLetter}
-        editLetter={editLetter}
-      />
+        <NoteModal
+          isOpen={isNoteModalOpen}
+          onClose={() => {
+            setIsNoteModalOpen(false);
+            setEditNote(null);
+          }}
+          onSuccess={handleSaveNote}
+          editNote={editNote}
+        />
 
-      <NoteModal
-        isOpen={isNoteModalOpen}
-        onClose={() => {
-          setIsNoteModalOpen(false);
-          setEditNote(null);
-        }}
-        onSuccess={handleSaveNote}
-        editNote={editNote}
-      />
+        <AudioModal
+          isOpen={isAudioModalOpen}
+          onClose={() => setIsAudioModalOpen(false)}
+          onSuccess={handleAddAudio}
+        />
 
-      <AudioModal
-        isOpen={isAudioModalOpen}
-        onClose={() => setIsAudioModalOpen(false)}
-        onSuccess={handleAddAudio}
-      />
-
-      <SettingsModal
-        isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
-        onRefreshData={refreshAllData}
-      />
-    </div>
+        <SettingsModal
+          isOpen={isSettingsOpen}
+          onClose={() => setIsSettingsOpen(false)}
+          onRefreshData={refreshAllData}
+        />
+      </div>
+    </AudioProvider>
   );
 }
