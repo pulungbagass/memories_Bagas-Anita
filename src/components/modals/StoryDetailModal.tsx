@@ -183,9 +183,14 @@ export const StoryDetailModal: React.FC<StoryDetailModalProps> = ({
 
       case 'audio': {
         const audio = item.rawItem as AudioMemory;
-        const isEmbed = Boolean(audio.embedUrl);
-        const isSpotify = audio.platform === 'spotify' || audio.url.includes('spotify.com');
-        const isYouTube = audio.platform === 'youtube' || audio.url.includes('youtube.com') || audio.url.includes('youtu.be');
+        const ytMatch = audio.url.match(/(?:watch\?v=|embed\/|shorts\/|youtu\.be\/|v=|\/live\/)([\w-]{11})/i);
+        const ytId = ytMatch ? ytMatch[1] : (audio.embedUrl ? audio.embedUrl.match(/embed\/([\w-]{11})/)?.[1] : null);
+        const spMatch = audio.url.match(/spotify\.com\/(track|album|playlist|episode)\/([a-zA-Z0-9]+)/i);
+        const spEmbed = spMatch ? `https://open.spotify.com/embed/${spMatch[1]}/${spMatch[2]}?utm_source=generator&theme=0` : audio.embedUrl;
+        const ytEmbed = ytId ? `https://www.youtube.com/embed/${ytId}` : audio.embedUrl;
+
+        const isSpotify = Boolean(spMatch || audio.platform === 'spotify' || audio.url.includes('spotify.com'));
+        const isYouTube = Boolean(ytId || audio.platform === 'youtube' || audio.url.includes('youtube.com') || audio.url.includes('youtu.be'));
 
         return (
           <div className="space-y-4">
@@ -205,10 +210,10 @@ export const StoryDetailModal: React.FC<StoryDetailModalProps> = ({
               </div>
 
               {/* Player Area */}
-              {isSpotify && audio.embedUrl ? (
+              {isSpotify && spEmbed ? (
                 <div className="rounded-xl overflow-hidden border border-white/10">
                   <iframe
-                    src={audio.embedUrl}
+                    src={spEmbed}
                     width="100%"
                     height="152"
                     frameBorder="0"
@@ -217,10 +222,10 @@ export const StoryDetailModal: React.FC<StoryDetailModalProps> = ({
                     className="rounded-xl"
                   />
                 </div>
-              ) : isYouTube && audio.embedUrl ? (
+              ) : isYouTube && ytEmbed ? (
                 <div className="relative rounded-xl overflow-hidden aspect-video border border-white/10">
                   <iframe
-                    src={audio.embedUrl}
+                    src={ytEmbed}
                     title={audio.title}
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                     allowFullScreen

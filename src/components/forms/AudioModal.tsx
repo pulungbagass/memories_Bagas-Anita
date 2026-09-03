@@ -3,18 +3,16 @@ import { GlassModal } from '../ui/GlassModal';
 import { GlassButton } from '../ui/GlassButton';
 import { 
   Music, 
-  UploadCloud, 
   Link as LinkIcon, 
   AlertCircle, 
   Sparkles, 
   CheckCircle2, 
   Loader2,
   Headphones,
-  Mic
+  Mic,
+  ExternalLink
 } from 'lucide-react';
 import { AuthorType, AudioMemory } from '../../types';
-import { uploadMediaToVercelBlob, DebugErrorLog } from '../../lib/vercelClient';
-import { DiagnosticInspector } from '../ui/DiagnosticInspector';
 
 interface AudioModalProps {
   isOpen: boolean;
@@ -27,8 +25,6 @@ export const AudioModal: React.FC<AudioModalProps> = ({
   onClose,
   onSuccess
 }) => {
-  // Mode: 'link' (YouTube, Spotify, TikTok, Instagram) or 'upload' (File from storage)
-  const [inputMode, setInputMode] = useState<'link' | 'upload'>('link');
   const [audioType, setAudioType] = useState<'song' | 'voicenote'>('song');
 
   // Form Fields
@@ -43,15 +39,10 @@ export const AudioModal: React.FC<AudioModalProps> = ({
   const [embedUrl, setEmbedUrl] = useState('');
   const [description, setDescription] = useState('');
   const [author, setAuthor] = useState<AuthorType>('Together');
-
-  // File Upload
-  const [file, setFile] = useState<File | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [debugError, setDebugError] = useState<DebugErrorLog | null>(null);
 
   const resetForm = () => {
-    setInputMode('link');
     setAudioType('song');
     setUrlInput('');
     setDetectedPlatform('');
@@ -63,10 +54,14 @@ export const AudioModal: React.FC<AudioModalProps> = ({
     setEmbedUrl('');
     setDescription('');
     setAuthor('Together');
-    setFile(null);
     setErrorMsg(null);
-    setDebugError(null);
-    setIsUploading(false);
+    setIsSubmitting(false);
+  };
+
+  // Helper to extract YouTube videoId
+  const getYouTubeVideoId = (url: string) => {
+    const match = url.match(/(?:watch\?v=|embed\/|shorts\/|youtu\.be\/|v=|\/live\/)([\w-]{11})/i);
+    return match ? match[1] : '';
   };
 
   // Live Auto-fetch metadata when URL is pasted / typed
@@ -79,118 +74,118 @@ export const AudioModal: React.FC<AudioModalProps> = ({
     }
 
     // Identify Platform
-    if (trimmed.includes('youtube.com') || trimmed.includes('youtu.be')) {
+    const isYt = trimmed.includes('youtube.com') || trimmed.includes('youtu.be');
+    const isYtMusic = trimmed.includes('music.youtube.com');
+    const isSp = trimmed.includes('spotify.com');
+    const isTt = trimmed.includes('tiktok.com');
+    const isIg = trimmed.includes('instagram.com');
+    const isSc = trimmed.includes('soundcloud.com');
+
+    if (isYtMusic) {
+      setDetectedPlatform('YouTube Music');
+    } else if (isYt) {
       setDetectedPlatform('YouTube');
-    } else if (trimmed.includes('spotify.com')) {
+    } else if (isSp) {
       setDetectedPlatform('Spotify');
-    } else if (trimmed.includes('tiktok.com')) {
+    } else if (isTt) {
       setDetectedPlatform('TikTok');
-    } else if (trimmed.includes('instagram.com')) {
+    } else if (isIg) {
       setDetectedPlatform('Instagram');
-    } else if (trimmed.includes('soundcloud.com')) {
+    } else if (isSc) {
       setDetectedPlatform('SoundCloud');
     } else {
-      setDetectedPlatform('Web Audio');
+      setDetectedPlatform('Direct Audio / Stream');
     }
 
-    // Debounce metadata fetch
+    // Client-side quick embeds & covers before API returns
+    if (isYt || isYtMusic) {
+      const vid = getYouTubeVideoId(trimmed);
+      if (vid) {
+        setEmbedUrl(`https://www.youtube.com/embed/${vid}?autoplay=1&enablejsapi=1`);
+        if (!coverUrl) {
+          setCoverUrl(`https://img.youtube.com/vi/${vid}/hqdefault.jpg`);
+        }
+      }
+    } else if (isSp) {
+      const spMatch = trimmed.match(/spotify\.com\/(track|album|playlist|episode)\/([a-zA-Z0-9]+)/i);
+      if (spMatch) {
+        setEmbedUrl(`https://open.spotify.com/embed/${spMatch[1]}/${spMatch[2]}?utm_source=generator`);
+      }
+    } else if (isSc) {
+      setEmbedUrl(`https://w.soundcloud.com/player/?url=${encodeURIComponent(trimmed)}&color=%23a855f7&auto_play=true`);
+    }
+
+    // Debounce metadata fetch from server
     const timeout = setTimeout(async () => {
       setIsLoadingMetadata(true);
       try {
         const res = await fetch(`/api/media-info?url=${encodeURIComponent(trimmed)}`);
         if (res.ok) {
           const data = await res.json();
-          if (data.title && !title) {
-            setTitle(data.title);
-          } else if (data.title && title === '') {
+          if (data.title && (!title || title.trim() === '')) {
             setTitle(data.title);
           }
-
-          if (data.artist && (!artist || artist === 'Shared Playlist')) {
+          if (data.artist && (!artist || artist.trim() === '' || artist === 'YouTube Creator')) {
             setArtist(data.artist);
           }
-
-          if (data.thumbnailUrl) {
+          if (data.thumbnailUrl && !coverUrl) {
             setCoverUrl(data.thumbnailUrl);
           }
           if (data.embedUrl) {
             setEmbedUrl(data.embedUrl);
           }
-
           setMetadataSuccess(true);
         }
       } catch {
-        // Silent fallback
+        // Silent fallback - user can fill manually
       } finally {
         setIsLoadingMetadata(false);
       }
-    }, 600);
+    }, 500);
 
     return () => clearTimeout(timeout);
   }, [urlInput]);
 
-  const handleFileSelect = (selectedFile: File) => {
-    if (!selectedFile.type.startsWith('audio/') && !selectedFile.name.match(/\.(mp3|wav|m4a|aac|ogg)$/i)) {
-      setErrorMsg('Pilih file audio yang valid (.mp3, .wav, .m4a, .ogg).');
-      return;
-    }
-    if (selectedFile.size > 50 * 1024 * 1024) {
-      setErrorMsg('Ukuran file audio melebihi batas 50MB.');
-      return;
-    }
-    setFile(selectedFile);
-    setErrorMsg(null);
-    setDebugError(null);
-
-    // Auto populate title from file name if blank
-    if (!title) {
-      const cleanName = selectedFile.name.replace(/\.[a-zA-Z0-9]+$/, '').replace(/[_-]/g, ' ');
-      setTitle(cleanName);
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const finalUrl = urlInput.trim();
+
+    if (!finalUrl) {
+      setErrorMsg('Harap masukkan URL / link lagu.');
+      return;
+    }
+
     if (!title.trim()) {
-      setErrorMsg('Harap masukkan judul lagu atau rekaman.');
+      setErrorMsg('Harap masukkan judul lagu.');
       return;
     }
 
-    if (inputMode === 'link' && !urlInput.trim()) {
-      setErrorMsg('Harap masukkan link URL lagu / media.');
-      return;
-    }
-
-    if (inputMode === 'upload' && !file) {
-      setErrorMsg('Harap pilih file audio dari penyimpanan.');
-      return;
-    }
-
-    setIsUploading(true);
+    setIsSubmitting(true);
     setErrorMsg(null);
-    setDebugError(null);
 
     try {
-      let finalUrl = urlInput.trim();
-
-      if (inputMode === 'upload' && file) {
-        const uploadRes = await uploadMediaToVercelBlob(file, author, 'Audio');
-        finalUrl = uploadRes.url;
-      }
-
       let platformType: AudioMemory['platform'] = 'direct';
-      if (inputMode === 'upload') {
-        platformType = 'upload';
-      } else if (finalUrl.includes('youtube.com') || finalUrl.includes('youtu.be')) {
+      let generatedEmbed = embedUrl;
+
+      if (finalUrl.includes('youtube.com') || finalUrl.includes('youtu.be')) {
         platformType = 'youtube';
+        const vid = getYouTubeVideoId(finalUrl);
+        if (vid) {
+          generatedEmbed = `https://www.youtube.com/embed/${vid}?autoplay=1&enablejsapi=1`;
+        }
       } else if (finalUrl.includes('spotify.com')) {
         platformType = 'spotify';
+        const spMatch = finalUrl.match(/spotify\.com\/(track|album|playlist|episode)\/([a-zA-Z0-9]+)/i);
+        if (spMatch) {
+          generatedEmbed = `https://open.spotify.com/embed/${spMatch[1]}/${spMatch[2]}?utm_source=generator`;
+        }
       } else if (finalUrl.includes('tiktok.com')) {
         platformType = 'tiktok';
       } else if (finalUrl.includes('instagram.com')) {
         platformType = 'instagram';
       } else if (finalUrl.includes('soundcloud.com')) {
         platformType = 'soundcloud';
+        generatedEmbed = `https://w.soundcloud.com/player/?url=${encodeURIComponent(finalUrl)}&color=%23a855f7&auto_play=true`;
       }
 
       const newAudio: AudioMemory = {
@@ -202,7 +197,7 @@ export const AudioModal: React.FC<AudioModalProps> = ({
         author,
         type: audioType,
         platform: platformType,
-        embedUrl: embedUrl || undefined,
+        embedUrl: generatedEmbed || undefined,
         date: new Date().toISOString().split('T')[0],
         coverUrl: coverUrl.trim() || undefined,
         description: description.trim() || undefined,
@@ -213,21 +208,9 @@ export const AudioModal: React.FC<AudioModalProps> = ({
       resetForm();
       onClose();
     } catch (err: any) {
-      console.error('Audio upload error:', err);
-      setErrorMsg(err.message || 'Gagal menyimpan lagu / audio');
-      setDebugError({
-        endpoint: err.endpoint || '/api/upload',
-        httpStatus: err.httpStatus || 500,
-        message: err.message || 'Failed to process audio',
-        timestamp: err.timestamp || new Date().toISOString(),
-        details: err.details || { error: String(err) },
-        suggestions: [
-          'Pastikan link URL valid (YouTube, Spotify, TikTok, IG, atau MP3 langsung).',
-          'Jika upload file, pastikan file berukuran di bawah 50MB.'
-        ]
-      });
+      setErrorMsg(err.message || 'Gagal menyimpan link lagu');
     } finally {
-      setIsUploading(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -241,48 +224,13 @@ export const AudioModal: React.FC<AudioModalProps> = ({
       title={
         <div className="flex items-center gap-2">
           <Music className="w-5 h-5 text-purple-400" />
-          <span>Tambah Musik & Audio 🎵</span>
+          <span>Tambah Musik & Audio Link 🎵</span>
         </div>
       }
       maxWidth="md"
     >
       <form onSubmit={handleSubmit} className="space-y-4 text-sm">
-        {/* Mode Selector Tabs: Link vs Upload */}
-        <div className="p-1 rounded-xl bg-white/5 border border-white/10 grid grid-cols-2 gap-1.5">
-          <button
-            type="button"
-            onClick={() => {
-              setInputMode('link');
-              setErrorMsg(null);
-            }}
-            className={`py-2 text-xs font-semibold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-              inputMode === 'link'
-                ? 'bg-purple-600 text-white shadow-md shadow-purple-600/30'
-                : 'text-slate-400 hover:text-white hover:bg-white/5'
-            }`}
-          >
-            <LinkIcon className="w-3.5 h-3.5" />
-            <span>Link Platform (YT/Spotify/TikTok)</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              setInputMode('upload');
-              setErrorMsg(null);
-            }}
-            className={`py-2 text-xs font-semibold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-              inputMode === 'upload'
-                ? 'bg-pink-600 text-white shadow-md shadow-pink-600/30'
-                : 'text-slate-400 hover:text-white hover:bg-white/5'
-            }`}
-          >
-            <UploadCloud className="w-3.5 h-3.5" />
-            <span>Upload dari Penyimpanan</span>
-          </button>
-        </div>
-
-        {/* Audio Type (Song or Voice Note) */}
+        {/* Audio Type Selector */}
         <div className="flex items-center gap-3">
           <button
             type="button"
@@ -308,82 +256,51 @@ export const AudioModal: React.FC<AudioModalProps> = ({
           </button>
         </div>
 
-        {/* Mode 1: URL Input with Auto Platform & Metadata Detection */}
-        {inputMode === 'link' && (
-          <div className="space-y-2 p-3.5 rounded-xl bg-[#14142b] border border-purple-500/30">
-            <div className="flex items-center justify-between">
-              <label className="block text-xs font-semibold text-purple-300 uppercase tracking-wider">
-                Link Lagu / Video / Audio *
-              </label>
-              {detectedPlatform && (
-                <span className="text-[11px] px-2 py-0.5 rounded-full bg-purple-500/30 text-purple-200 font-medium flex items-center gap-1">
-                  <Sparkles className="w-3 h-3 text-purple-300" />
-                  {detectedPlatform}
-                </span>
+        {/* Link Input Section */}
+        <div className="space-y-2 p-3.5 rounded-xl bg-[#14142b] border border-purple-500/30">
+          <div className="flex items-center justify-between">
+            <label className="block text-xs font-semibold text-purple-300 uppercase tracking-wider">
+              Link Lagu / Platform Audio *
+            </label>
+            {detectedPlatform && (
+              <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-purple-500/30 text-purple-200 font-semibold flex items-center gap-1 border border-purple-500/40">
+                <Sparkles className="w-3 h-3 text-purple-300" />
+                {detectedPlatform}
+              </span>
+            )}
+          </div>
+
+          <div className="relative">
+            <input
+              type="url"
+              value={urlInput}
+              onChange={(e) => setUrlInput(e.target.value)}
+              placeholder="Paste link YouTube, YouTube Music, Spotify, TikTok, IG, atau SoundCloud..."
+              className="w-full px-3.5 py-2.5 rounded-xl glass-input text-xs sm:text-sm text-white placeholder-slate-500 pr-10"
+              required
+            />
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
+              {isLoadingMetadata ? (
+                <Loader2 className="w-4 h-4 animate-spin text-purple-400" />
+              ) : metadataSuccess ? (
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+              ) : (
+                <LinkIcon className="w-4 h-4 text-slate-500" />
               )}
             </div>
-
-            <div className="relative">
-              <input
-                type="url"
-                value={urlInput}
-                onChange={(e) => setUrlInput(e.target.value)}
-                placeholder="Paste link YouTube, Spotify, TikTok, Instagram, atau SoundCloud..."
-                className="w-full px-3.5 py-2.5 rounded-xl glass-input text-xs sm:text-sm text-white placeholder-slate-500 pr-10"
-                required={inputMode === 'link'}
-              />
-              <div className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
-                {isLoadingMetadata ? (
-                  <Loader2 className="w-4 h-4 animate-spin text-purple-400" />
-                ) : metadataSuccess ? (
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                ) : (
-                  <LinkIcon className="w-4 h-4 text-slate-500" />
-                )}
-              </div>
-            </div>
-
-            <div className="text-[11px] text-slate-400 flex items-center gap-1.5">
-              <span>Mendukung YouTube, YouTube Music, Spotify, TikTok, Instagram Reel, SoundCloud & MP3 URL.</span>
-            </div>
-
-            {metadataSuccess && (
-              <div className="text-[11px] text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 p-2 rounded-lg flex items-center gap-1.5">
-                <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-                <span>Informasi judul lagu dan artis berhasil terisi otomatis!</span>
-              </div>
-            )}
           </div>
-        )}
 
-        {/* Mode 2: Storage Upload */}
-        {inputMode === 'upload' && (
-          <div className="p-3.5 rounded-xl bg-[#14142b] border border-pink-500/30 space-y-2">
-            <label className="block text-xs font-semibold text-pink-300 uppercase tracking-wider flex items-center gap-1">
-              <UploadCloud className="w-3.5 h-3.5" /> Pilih File Audio dari Penyimpanan *
-            </label>
-            <input
-              type="file"
-              accept="audio/*,.mp3,.wav,.m4a,.aac,.ogg"
-              onChange={(e) => {
-                if (e.target.files && e.target.files[0]) {
-                  handleFileSelect(e.target.files[0]);
-                }
-              }}
-              className="w-full px-3 py-2 rounded-xl glass-input text-xs text-slate-300 file:mr-3 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-pink-500/20 file:text-pink-300 hover:file:bg-pink-500/30 cursor-pointer"
-              required={inputMode === 'upload' && !file}
-            />
-            {file ? (
-              <div className="text-[11px] text-pink-300">
-                Terpilih: {file.name} ({(file.size / (1024 * 1024)).toFixed(2)} MB)
-              </div>
-            ) : (
-              <div className="text-[11px] text-slate-400">
-                Mendukung format MP3, WAV, M4A, OGG hingga 50MB.
-              </div>
-            )}
+          <div className="text-[11px] text-slate-400 leading-relaxed">
+            Mendukung penuh <strong className="text-purple-300">YouTube, YouTube Music, Spotify, TikTok, Instagram Reel, SoundCloud</strong>, dan URL audio langsung (.mp3). Hemat ruang penyimpanan & bebas batas kuota file!
           </div>
-        )}
+
+          {metadataSuccess && (
+            <div className="text-[11px] text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 p-2 rounded-lg flex items-center gap-1.5">
+              <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+              <span>Informasi judul dan artis berhasil dimuat otomatis!</span>
+            </div>
+          )}
+        </div>
 
         {/* Error message */}
         {errorMsg && (
@@ -391,14 +308,6 @@ export const AudioModal: React.FC<AudioModalProps> = ({
             <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
             <div className="flex-1">{errorMsg}</div>
           </div>
-        )}
-
-        {/* Diagnostic Inspector */}
-        {debugError && (
-          <DiagnosticInspector
-            debugError={debugError}
-            defaultExpanded={true}
-          />
         )}
 
         {/* Title & Artist fields */}
@@ -431,10 +340,10 @@ export const AudioModal: React.FC<AudioModalProps> = ({
           </div>
         </div>
 
-        {/* Author / Dedicated By */}
+        {/* Dedicated By / Author */}
         <div>
           <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
-            Diunggah / Didedikasikan Oleh
+            Didedikasikan Oleh
           </label>
           <select
             value={author}
@@ -455,7 +364,7 @@ export const AudioModal: React.FC<AudioModalProps> = ({
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="Mengapa lagu atau pesan suara ini sangat berharga bagi kita?..."
+            placeholder="Mengapa lagu ini sangat berarti untuk kita?..."
             rows={2}
             className="w-full px-3.5 py-2 rounded-xl glass-input text-xs sm:text-sm text-white placeholder-slate-500 resize-none"
           />
@@ -476,10 +385,10 @@ export const AudioModal: React.FC<AudioModalProps> = ({
           <GlassButton
             type="submit"
             variant="primary"
-            isLoading={isUploading}
+            isLoading={isSubmitting}
             icon={<Music className="w-4 h-4" />}
           >
-            {isUploading ? 'Menyimpan...' : 'Simpan Musik'}
+            Simpan Lagu
           </GlassButton>
         </div>
       </form>

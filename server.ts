@@ -216,7 +216,7 @@ const handleGetAllData = async (req: express.Request, res: express.Response) => 
 app.get('/api/all-data', handleGetAllData);
 app.get('/api/data', handleGetAllData);
 
-// Media Link Info Auto-Extraction Endpoint (YouTube, Spotify, TikTok, Instagram, etc.)
+// Media Link Info Auto-Extraction Endpoint (YouTube, YouTube Music, Spotify, TikTok, Instagram, etc.)
 app.get('/api/media-info', async (req, res) => {
   try {
     const rawUrl = String(req.query.url || '').trim();
@@ -230,28 +230,41 @@ app.get('/api/media-info', async (req, res) => {
     let thumbnailUrl = '';
     let embedUrl = '';
 
-    if (rawUrl.includes('youtube.com') || rawUrl.includes('youtu.be')) {
-      platform = 'youtube';
-      artist = 'YouTube Music';
-      // Try fetching YouTube oEmbed
-      try {
-        const oembedRes = await fetch(`https://www.youtube.com/oembed?url=${encodeURIComponent(rawUrl)}&format=json`);
-        if (oembedRes.ok) {
-          const data: any = await oembedRes.json();
-          title = data.title || '';
-          artist = data.author_name || 'YouTube Creator';
-          thumbnailUrl = data.thumbnail_url || '';
-        }
-      } catch {
-        // Fallback title heuristic
-      }
+    const isYouTube = rawUrl.includes('youtube.com') || rawUrl.includes('youtu.be');
+    const isSpotify = rawUrl.includes('spotify.com');
+    const isTikTok = rawUrl.includes('tiktok.com');
+    const isInstagram = rawUrl.includes('instagram.com');
+    const isSoundCloud = rawUrl.includes('soundcloud.com');
 
-      // Generate embed url if possible
-      const ytMatch = rawUrl.match(/(?:watch\?v=|embed\/|shorts\/|youtu\.be\/)([\w-]{11})/i);
-      if (ytMatch && ytMatch[1]) {
-        embedUrl = `https://www.youtube.com/embed/${ytMatch[1]}`;
+    if (isYouTube) {
+      platform = 'youtube';
+      artist = rawUrl.includes('music.youtube.com') ? 'YouTube Music' : 'YouTube';
+
+      // Extract Video ID with robust regex
+      const ytMatch = rawUrl.match(/(?:watch\?v=|embed\/|shorts\/|youtu\.be\/|v=|\/live\/)([\w-]{11})/i);
+      const videoId = ytMatch ? ytMatch[1] : '';
+
+      if (videoId) {
+        embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&enablejsapi=1`;
+        thumbnailUrl = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+
+        // Always query oEmbed with standard www.youtube.com URL for 100% success rate
+        try {
+          const canonicalYtUrl = `https://www.youtube.com/watch?v=${videoId}`;
+          const oembedRes = await fetch(`https://www.youtube.com/oembed?url=${encodeURIComponent(canonicalYtUrl)}&format=json`);
+          if (oembedRes.ok) {
+            const data: any = await oembedRes.json();
+            title = data.title || '';
+            artist = data.author_name || (rawUrl.includes('music.youtube.com') ? 'YouTube Music' : 'YouTube Artist');
+            if (data.thumbnail_url) {
+              thumbnailUrl = data.thumbnail_url;
+            }
+          }
+        } catch {
+          // Fallback title heuristic
+        }
       }
-    } else if (rawUrl.includes('spotify.com')) {
+    } else if (isSpotify) {
       platform = 'spotify';
       artist = 'Spotify Track';
       try {
@@ -266,9 +279,9 @@ app.get('/api/media-info', async (req, res) => {
       // Convert spotify track URL to embed URL
       const spMatch = rawUrl.match(/spotify\.com\/(track|album|playlist|episode)\/([a-zA-Z0-9]+)/i);
       if (spMatch) {
-        embedUrl = `https://open.spotify.com/embed/${spMatch[1]}/${spMatch[2]}`;
+        embedUrl = `https://open.spotify.com/embed/${spMatch[1]}/${spMatch[2]}?utm_source=generator`;
       }
-    } else if (rawUrl.includes('tiktok.com')) {
+    } else if (isTikTok) {
       platform = 'tiktok';
       artist = 'TikTok Audio';
       try {
@@ -280,13 +293,14 @@ app.get('/api/media-info', async (req, res) => {
           thumbnailUrl = data.thumbnail_url || '';
         }
       } catch {}
-    } else if (rawUrl.includes('instagram.com')) {
+    } else if (isInstagram) {
       platform = 'instagram';
       artist = 'Instagram Reel / Audio';
-      title = 'Instagram Soundtrack';
-    } else if (rawUrl.includes('soundcloud.com')) {
+      title = 'Instagram Audio';
+    } else if (isSoundCloud) {
       platform = 'soundcloud';
       artist = 'SoundCloud Artist';
+      embedUrl = `https://w.soundcloud.com/player/?url=${encodeURIComponent(rawUrl)}&color=%23a855f7&auto_play=true&hide_related=false&show_comments=true&show_user=true&show_reposts=false&show_teaser=true`;
       try {
         const oembedRes = await fetch(`https://soundcloud.com/oembed?url=${encodeURIComponent(rawUrl)}&format=json`);
         if (oembedRes.ok) {

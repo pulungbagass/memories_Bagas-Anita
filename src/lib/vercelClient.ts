@@ -213,9 +213,14 @@ export async function uploadMediaToVercelBlob(
   if (!res.ok) {
     let errorJson: any = {};
     try {
-      errorJson = await res.json();
-    } catch {
-      errorJson = { error: await res.text() };
+      const rawText = await res.text();
+      try {
+        errorJson = JSON.parse(rawText);
+      } catch {
+        errorJson = { error: rawText || `Server error (status ${res.status})` };
+      }
+    } catch (e: any) {
+      errorJson = { error: e.message || 'Failed to read response' };
     }
 
     const suggestions: string[] = [];
