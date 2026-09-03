@@ -19,10 +19,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
     setIsLoading(true);
 
     setTimeout(() => {
-      if (password === 'saya123') {
+      if (password === 'bagas ganteng banget') {
         onLoginSuccess();
       } else {
-        setError('Password salah. (Petunjuk: saya123)');
+        setError('Passwordnya Tanya Bagas ya cantik 😘');
         setIsLoading(false);
       }
     }, 200);
@@ -59,7 +59,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                 <span className="flex items-center gap-1.5">
                   <Lock className="w-3.5 h-3.5 text-pink-400" /> Passcode
                 </span>
-                <span className="text-[10px] text-pink-400 font-normal">Petunjuk: saya123</span>
               </label>
 
               <div className="relative">

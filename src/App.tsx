@@ -209,7 +209,7 @@ export default function App() {
             /* Dedicated Modular Welcome Page */
             <WelcomePage
               onContinue={() => setShowWelcome(false)}
-              startDate="2022-04-16"
+              // startDate="2022-04-16" // (Uncomment nanti saat sudah jadian: YYYY-MM-DD)
               partner1Name="Bagas"
               partner2Name="Anita"
             />

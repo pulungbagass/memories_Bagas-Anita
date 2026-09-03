@@ -102,7 +102,7 @@ export const AudioModal: React.FC<AudioModalProps> = ({
     if (isYt || isYtMusic) {
       const vid = getYouTubeVideoId(trimmed);
       if (vid) {
-        setEmbedUrl(`https://www.youtube.com/embed/${vid}?autoplay=1&enablejsapi=1`);
+        setEmbedUrl(`https://www.youtube.com/embed/${vid}?autoplay=0&enablejsapi=1`);
         if (!coverUrl) {
           setCoverUrl(`https://img.youtube.com/vi/${vid}/hqdefault.jpg`);
         }
@@ -113,7 +113,7 @@ export const AudioModal: React.FC<AudioModalProps> = ({
         setEmbedUrl(`https://open.spotify.com/embed/${spMatch[1]}/${spMatch[2]}?utm_source=generator`);
       }
     } else if (isSc) {
-      setEmbedUrl(`https://w.soundcloud.com/player/?url=${encodeURIComponent(trimmed)}&color=%23a855f7&auto_play=true`);
+      setEmbedUrl(`https://w.soundcloud.com/player/?url=${encodeURIComponent(trimmed)}&color=%23a855f7&auto_play=false`);
     }
 
     // Debounce metadata fetch from server, with instant client-side oEmbed fallback

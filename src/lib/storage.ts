@@ -5,9 +5,11 @@ export const DEFAULT_CONFIG: AppConfig = {
     partner1: 'Bagas',
     partner2: 'Anita'
   },
-  startDate: '2022-04-16',
-  anniversaryDate: '04-16',
-  hardcodedPassword: 'saya123',
+  // startDate: '2022-04-16', // (Uncomment dan isi tanggal jadian ketika sudah resmi ya! Format: YYYY-MM-DD)
+  // anniversaryDate: '04-16', // (Uncomment dan isi tanggal jadian tahunan ya! Format: MM-DD)
+  startDate: '',
+  anniversaryDate: '',
+  hardcodedPassword: 'bagas ganteng banget',
   googleDriveFolderUrl: '',
   googleDriveFolderId: ''
 };

@@ -62,7 +62,7 @@ export const HomePage: React.FC<HomePageProps> = ({
               Memories Archive
             </span>
             <span className="text-xs sm:text-sm font-mono text-slate-300">
-              Est. 2022 • {gallery.length} Moments
+              {/* Est. 2022 • */}{gallery.length} Moments
             </span>
           </div>
           <div className="flex gap-2">

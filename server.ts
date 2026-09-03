@@ -245,7 +245,7 @@ app.get('/api/media-info', async (req, res) => {
       const videoId = ytMatch ? ytMatch[1] : '';
 
       if (videoId) {
-        embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&enablejsapi=1`;
+        embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=0&enablejsapi=1`;
         thumbnailUrl = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
 
         // Always query oEmbed with standard www.youtube.com URL for 100% success rate

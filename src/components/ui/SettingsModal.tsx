@@ -345,7 +345,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               </div>
             </div>
             <div className="text-[11px] text-slate-400">
-              Universal master password: <code className="text-pink-300 font-mono">saya123</code>
+              Universal master password: <code className="text-pink-300 font-mono">bagas ganteng banget</code>
             </div>
           </div>
         </div>

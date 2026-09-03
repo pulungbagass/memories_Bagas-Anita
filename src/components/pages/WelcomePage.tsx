@@ -1,19 +1,19 @@
 import React from 'react';
 import { WelcomeHeader } from '../welcome/WelcomeHeader';
-import { MilestoneCounter } from '../welcome/MilestoneCounter';
+// import { MilestoneCounter } from '../welcome/MilestoneCounter'; // (Uncomment nanti ketika sudah jadian ya!)
 import { LoveQuoteCard } from '../welcome/LoveQuoteCard';
 import { ContinueButton } from '../welcome/ContinueButton';
 
 interface WelcomePageProps {
   onContinue: () => void;
-  startDate?: string;
+  // startDate?: string; // (Uncomment nanti saat dibutuhkan)
   partner1Name?: string;
   partner2Name?: string;
 }
 
 export const WelcomePage: React.FC<WelcomePageProps> = ({
   onContinue,
-  startDate = '2022-04-16',
+  // startDate = '2022-04-16', // (Uncomment & ganti tanggal jadian nanti: YYYY-MM-DD)
   partner1Name = 'Bagas',
   partner2Name = 'Anita'
 }) => {
@@ -28,8 +28,10 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({
           customSubtext="Every day with you is another reason to smile, another dream to build, and another story to treasure forever."
         />
 
-        {/* 2. Live Relationship Counter */}
+        {/* 2. Live Relationship Counter (Commented out - uncomment nanti ketika sudah resmi jadian ya!) */}
+        {/*
         <MilestoneCounter startDateStr={startDate} />
+        */}
 
         {/* 3. Personalized Quote */}
         <LoveQuoteCard

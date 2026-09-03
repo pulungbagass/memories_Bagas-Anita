@@ -8,7 +8,8 @@ interface MilestoneCounterProps {
 }
 
 export const MilestoneCounter: React.FC<MilestoneCounterProps> = ({
-  startDateStr = '2022-04-16'
+  // startDateStr = '2022-04-16' // (Ganti tanggal jadian di sini: YYYY-MM-DD saat sudah resmi jadian)
+  startDateStr = ''
 }) => {
   const [timeTogether, setTimeTogether] = useState({
     days: 0,
@@ -54,7 +55,8 @@ export const MilestoneCounter: React.FC<MilestoneCounterProps> = ({
         <div className="flex items-center justify-between pb-4 border-b border-white/10 mb-6">
           <div className="flex items-center gap-2 text-xs sm:text-sm font-medium text-pink-300">
             <CalendarHeart className="w-4 h-4 text-pink-400" />
-            <span>Loving Each Other Since April 16, 2022</span>
+            {/* <span>Loving Each Other Since April 16, 2022</span> */}
+            <span>Loving Each Other</span>
           </div>
           <div className="flex items-center gap-1 text-[11px] text-white/50">
             <Clock className="w-3.5 h-3.5 text-pink-400" /> Live

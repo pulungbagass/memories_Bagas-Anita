@@ -58,6 +58,7 @@ export const AudioPlayerBar: React.FC<AudioPlayerBarProps> = () => {
     seekProgress,
     commitSeek,
     toggleMute,
+    sendYtCommand,
   } = useAudio();
 
   // Load saved corner from localStorage or default to top-right
@@ -76,6 +77,21 @@ export const AudioPlayerBar: React.FC<AudioPlayerBarProps> = () => {
 
   const dragX = useMotionValue(0);
   const dragY = useMotionValue(0);
+
+  // Guard against uninvited autoplay on mount (e.g. when entering Dashboard from Explore/WelcomePage)
+  useEffect(() => {
+    if (!isPlaying) {
+      sendYtCommand('pauseVideo');
+      const t1 = setTimeout(() => sendYtCommand('pauseVideo'), 250);
+      const t2 = setTimeout(() => sendYtCommand('pauseVideo'), 700);
+      const t3 = setTimeout(() => sendYtCommand('pauseVideo'), 1400);
+      return () => {
+        clearTimeout(t1);
+        clearTimeout(t2);
+        clearTimeout(t3);
+      };
+    }
+  }, []);
 
   // Sync when user requests video visual playback from anywhere (e.g. MusicPage)
   useEffect(() => {
@@ -174,6 +190,21 @@ export const AudioPlayerBar: React.FC<AudioPlayerBarProps> = () => {
                 src={trackMediaInfo.embedUrl}
                 title="Pure Visual Video"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                onLoad={() => {
+                  if (ytIframeRef.current?.contentWindow) {
+                    try {
+                      ytIframeRef.current.contentWindow.postMessage(
+                        JSON.stringify({ event: 'listening' }),
+                        '*'
+                      );
+                    } catch {}
+                  }
+                  if (isPlaying) {
+                    sendYtCommand('playVideo');
+                  } else {
+                    sendYtCommand('pauseVideo');
+                  }
+                }}
                 className={
                   showEmbeddedPlayer && !isMinimized 
                     ? 'w-full h-full pointer-events-none scale-[1.04] object-cover select-none' 
