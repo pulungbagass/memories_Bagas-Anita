@@ -298,7 +298,6 @@ export const MusicPage: React.FC<MusicPageProps> = ({
           <div className="flex items-center justify-between pt-3 border-t border-white/10 text-[11px] text-slate-400">
             <div className="flex items-center gap-1.5 text-purple-300">
               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Satu Sumber Suara Sinkron (Global AudioContext Engine • Bebas Dobel Suara)</span>
             </div>
             <span className="text-slate-400 font-mono">
               Lagu {currentTrackIndex + 1} dari {tracks.length}

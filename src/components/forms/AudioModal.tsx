@@ -304,7 +304,7 @@ export const AudioModal: React.FC<AudioModalProps> = ({
               type="url"
               value={urlInput}
               onChange={(e) => setUrlInput(e.target.value)}
-              placeholder="Paste link YouTube, YouTube Music, Spotify, TikTok, IG, atau SoundCloud..."
+              placeholder="Paste link YouTube, YouTube Music..."
               className="w-full px-3.5 py-2.5 rounded-xl glass-input text-xs sm:text-sm text-white placeholder-slate-500 pr-10"
               required
             />
@@ -320,7 +320,7 @@ export const AudioModal: React.FC<AudioModalProps> = ({
           </div>
 
           <div className="text-[11px] text-slate-400 leading-relaxed">
-            Mendukung penuh <strong className="text-purple-300">YouTube, YouTube Music, Spotify, TikTok, Instagram Reel, SoundCloud</strong>, dan URL audio langsung (.mp3). Hemat ruang penyimpanan & bebas batas kuota file!
+            Hanya Mendukung <strong className="text-purple-300">YouTube/YouTube Music</strong> URL audio langsung (.mp3).
           </div>
 
           {metadataSuccess && (
