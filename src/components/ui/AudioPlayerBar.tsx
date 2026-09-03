@@ -17,7 +17,8 @@ import {
   ArrowDownRight,
   ArrowDownLeft,
   Radio,
-  Sliders
+  Sliders,
+  Loader2
 } from 'lucide-react';
 import { motion, useMotionValue } from 'motion/react';
 import { AudioMemory } from '../../types';
@@ -40,6 +41,7 @@ export const AudioPlayerBar: React.FC<AudioPlayerBarProps> = () => {
     currentTrackIndex,
     currentTrack,
     isPlaying,
+    isBuffering,
     currentTime,
     duration,
     isSeeking,
@@ -255,7 +257,14 @@ export const AudioPlayerBar: React.FC<AudioPlayerBarProps> = () => {
                   {currentTrack.title}
                 </span>
                 <span className="text-[9px] text-purple-300/70 truncate flex items-center gap-1 font-mono">
-                  {formatAudioTime(currentTime)} / {formatAudioTime(duration)}
+                  {isBuffering && isPlaying ? (
+                    <span className="text-purple-300 flex items-center gap-1 font-sans">
+                      <Loader2 className="w-2.5 h-2.5 animate-spin text-purple-400" />
+                      <span>Memuat...</span>
+                    </span>
+                  ) : (
+                    `${formatAudioTime(currentTime)} / ${formatAudioTime(duration)}`
+                  )}
                 </span>
               </div>
 
@@ -266,9 +275,13 @@ export const AudioPlayerBar: React.FC<AudioPlayerBarProps> = () => {
                   togglePlay();
                 }}
                 className="p-1.5 rounded-full bg-purple-500 text-white hover:bg-purple-400 transition-colors shrink-0 shadow-sm cursor-pointer"
-                title={isPlaying ? 'Pause' : 'Play'}
+                title={isPlaying ? (isBuffering ? 'Memuat audio...' : 'Pause') : 'Play'}
               >
-                {isPlaying ? <Pause className="w-3 h-3 fill-current" /> : <Play className="w-3 h-3 fill-current ml-0.5" />}
+                {isPlaying ? (
+                  isBuffering ? <Loader2 className="w-3 h-3 animate-spin" /> : <Pause className="w-3 h-3 fill-current" />
+                ) : (
+                  <Play className="w-3 h-3 fill-current ml-0.5" />
+                )}
               </button>
 
               {/* Expand Button */}
@@ -398,7 +411,16 @@ export const AudioPlayerBar: React.FC<AudioPlayerBarProps> = () => {
               {/* Dedicated Timeline Scrubber Slidebar (100% Synchronized) */}
               <div className="space-y-1.5 pt-1">
                 <div className="flex items-center justify-between text-[10px] text-slate-400 font-mono select-none px-0.5">
-                  <span className="text-purple-300 font-semibold">{formatAudioTime(currentTime)}</span>
+                  <span className="text-purple-300 font-semibold flex items-center gap-1">
+                    {isBuffering && isPlaying ? (
+                      <>
+                        <Loader2 className="w-3 h-3 animate-spin text-purple-400" />
+                        <span className="text-purple-300 font-sans">Memuat trek...</span>
+                      </>
+                    ) : (
+                      formatAudioTime(currentTime)
+                    )}
+                  </span>
                   <span className="text-slate-500">
                     {isSeeking ? 'Scrubbing...' : formatAudioTime(duration)}
                   </span>
@@ -446,9 +468,13 @@ export const AudioPlayerBar: React.FC<AudioPlayerBarProps> = () => {
                   <button
                     onClick={togglePlay}
                     className="p-2.5 rounded-full bg-purple-500 text-white hover:bg-purple-400 transition-colors shadow-md shadow-purple-500/40 cursor-pointer"
-                    title={isPlaying ? 'Pause' : 'Play'}
+                    title={isPlaying ? (isBuffering ? 'Memuat audio...' : 'Pause') : 'Play'}
                   >
-                    {isPlaying ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current ml-0.5" />}
+                    {isPlaying ? (
+                      isBuffering ? <Loader2 className="w-4 h-4 animate-spin" /> : <Pause className="w-4 h-4 fill-current" />
+                    ) : (
+                      <Play className="w-4 h-4 fill-current ml-0.5" />
+                    )}
                   </button>
 
                   <button

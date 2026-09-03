@@ -27,6 +27,7 @@ interface AudioContextType {
   currentTrackIndex: number;
   currentTrack: AudioMemory | null;
   isPlaying: boolean;
+  isBuffering: boolean;
   currentTime: number;
   duration: number;
   isSeeking: boolean;
@@ -66,22 +67,35 @@ export const AudioProvider: React.FC<AudioProviderProps> = ({
     return initialTrackIndex >= 0 && initialTrackIndex < tracks.length ? initialTrackIndex : 0;
   });
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
+  const [isBuffering, setIsBuffering] = useState<boolean>(false);
   const [currentTime, setCurrentTime] = useState<number>(0);
   const [duration, setDuration] = useState<number>(180);
   const [isSeeking, setIsSeeking] = useState<boolean>(false);
   const [isMuted, setIsMuted] = useState<boolean>(false);
   const [showVideoPlayer, setShowVideoPlayer] = useState<boolean>(false);
+  const [embedAutoPlay, setEmbedAutoPlay] = useState<boolean>(false);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const ytIframeRef = useRef<HTMLIFrameElement | null>(null);
   const isSeekingRef = useRef<boolean>(false);
+  const isBufferingRef = useRef<boolean>(false);
+  const isPlayingRef = useRef<boolean>(false);
+  const shouldAutoPlayNewTrackRef = useRef<boolean>(false);
   const durationRef = useRef<number>(180);
   const seekTimeoutRef = useRef<any>(null);
 
-  // Sync isSeekingRef & durationRef
+  // Sync isSeekingRef, isBufferingRef, isPlayingRef & durationRef
   useEffect(() => {
     isSeekingRef.current = isSeeking;
   }, [isSeeking]);
+
+  useEffect(() => {
+    isBufferingRef.current = isBuffering;
+  }, [isBuffering]);
+
+  useEffect(() => {
+    isPlayingRef.current = isPlaying;
+  }, [isPlaying]);
 
   useEffect(() => {
     durationRef.current = duration;
@@ -125,7 +139,7 @@ export const AudioProvider: React.FC<AudioProviderProps> = ({
     }
   }, [currentTrackIndex, currentTrack?.duration]);
 
-  // Track media information & embed URLs (STRICTLY NO AUTOPLAY ON INITIAL LOAD - WAITS FOR CONTROLLER CLICK)
+  // Track media information & embed URLs
   const trackMediaInfo = useMemo<TrackMediaInfo>(() => {
     if (!currentTrack) return { type: 'none' };
     const url = currentTrack.url || '';
@@ -134,12 +148,13 @@ export const AudioProvider: React.FC<AudioProviderProps> = ({
     if (ytId) {
       const isYtMusic = url.includes('music.youtube.com');
       const origin = typeof window !== 'undefined' ? window.location.origin : '';
+      const autoPlayVal = embedAutoPlay ? 1 : 0;
       return {
         type: 'youtube',
         videoId: ytId,
         isYtMusic,
-        // Visual video player: autoplay=0 ensures track stays paused when added, waiting for controller play click
-        embedUrl: `https://www.youtube.com/embed/${ytId}?enablejsapi=1&autoplay=0&controls=0&modestbranding=1&rel=0&showinfo=0&iv_load_policy=3&disablekb=1&fs=0&playsinline=1&origin=${origin}`,
+        // Visual video player: autoplay is 1 only when transitioning while active, 0 on initial load / pause
+        embedUrl: `https://www.youtube.com/embed/${ytId}?enablejsapi=1&autoplay=${autoPlayVal}&controls=0&modestbranding=1&rel=0&showinfo=0&iv_load_policy=3&disablekb=1&fs=0&playsinline=1&origin=${origin}`,
       };
     }
 
@@ -155,12 +170,12 @@ export const AudioProvider: React.FC<AudioProviderProps> = ({
     if (url.includes('soundcloud.com')) {
       return {
         type: 'soundcloud',
-        embedUrl: `https://w.soundcloud.com/player/?url=${encodeURIComponent(url)}&color=%23a855f7&auto_play=false`,
+        embedUrl: `https://w.soundcloud.com/player/?url=${encodeURIComponent(url)}&color=%23a855f7&auto_play=${embedAutoPlay ? 'true' : 'false'}`,
       };
     }
 
     return { type: 'direct', url };
-  }, [currentTrack]);
+  }, [currentTrack, embedAutoPlay]);
 
   // Helper to send postMessage to YouTube iframe
   const sendYtCommand = useCallback((func: string, args: any[] = []) => {
@@ -174,9 +189,13 @@ export const AudioProvider: React.FC<AudioProviderProps> = ({
     }
   }, []);
 
-  // Next Track
+  // Next Track: locks timeline at 0 until new track finishes loading/buffering
   const nextTrack = useCallback(() => {
     if (tracks.length > 0) {
+      const willPlay = isPlayingRef.current;
+      shouldAutoPlayNewTrackRef.current = willPlay;
+      setEmbedAutoPlay(willPlay);
+
       setCurrentTrackIndex((prev) => {
         const nextIdx = (prev + 1) % tracks.length;
         const dur = parseAudioDuration(tracks[nextIdx]?.duration);
@@ -189,12 +208,24 @@ export const AudioProvider: React.FC<AudioProviderProps> = ({
       setCurrentTime(0);
       setIsSeeking(false);
       isSeekingRef.current = false;
+
+      if (willPlay) {
+        setIsBuffering(true);
+        isBufferingRef.current = true;
+      } else {
+        setIsBuffering(false);
+        isBufferingRef.current = false;
+      }
     }
   }, [tracks]);
 
-  // Prev Track
+  // Prev Track: locks timeline at 0 until new track finishes loading/buffering
   const prevTrack = useCallback(() => {
     if (tracks.length > 0) {
+      const willPlay = isPlayingRef.current;
+      shouldAutoPlayNewTrackRef.current = willPlay;
+      setEmbedAutoPlay(willPlay);
+
       setCurrentTrackIndex((prev) => {
         const prevIdx = (prev - 1 + tracks.length) % tracks.length;
         const dur = parseAudioDuration(tracks[prevIdx]?.duration);
@@ -207,12 +238,22 @@ export const AudioProvider: React.FC<AudioProviderProps> = ({
       setCurrentTime(0);
       setIsSeeking(false);
       isSeekingRef.current = false;
+
+      if (willPlay) {
+        setIsBuffering(true);
+        isBufferingRef.current = true;
+      } else {
+        setIsBuffering(false);
+        isBufferingRef.current = false;
+      }
     }
   }, [tracks]);
 
   // Select Track
   const playTrack = useCallback((index: number) => {
     if (index >= 0 && index < tracks.length) {
+      shouldAutoPlayNewTrackRef.current = true;
+      setEmbedAutoPlay(true);
       setCurrentTrackIndex(index);
       setCurrentTime(0);
       const dur = parseAudioDuration(tracks[index]?.duration);
@@ -223,6 +264,9 @@ export const AudioProvider: React.FC<AudioProviderProps> = ({
       setIsSeeking(false);
       isSeekingRef.current = false;
       setIsPlaying(true);
+      isPlayingRef.current = true;
+      setIsBuffering(true);
+      isBufferingRef.current = true;
     }
   }, [tracks]);
 
@@ -281,13 +325,25 @@ export const AudioProvider: React.FC<AudioProviderProps> = ({
     }
   }, [isPlaying, trackMediaInfo, sendYtCommand]);
 
+  // Buffering safety release: prevents UI lockup if an embed never sends postMessage events
+  useEffect(() => {
+    if (isBuffering) {
+      const timer = setTimeout(() => {
+        setIsBuffering(false);
+        isBufferingRef.current = false;
+        shouldAutoPlayNewTrackRef.current = false;
+      }, 2200);
+      return () => clearTimeout(timer);
+    }
+  }, [isBuffering, currentTrackIndex]);
+
   // Direct Audio HTML5 Listeners with complete cleanup
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio || trackMediaInfo.type !== 'direct') return;
 
     const handleTimeUpdate = () => {
-      if (!isSeekingRef.current) {
+      if (!isSeekingRef.current && !isBufferingRef.current) {
         setCurrentTime(audio.currentTime);
       }
     };
@@ -295,15 +351,33 @@ export const AudioProvider: React.FC<AudioProviderProps> = ({
     const handleLoadedMetadata = () => {
       if (audio.duration && !isNaN(audio.duration) && audio.duration > 0) {
         setDuration(audio.duration);
+        durationRef.current = audio.duration;
       }
     };
 
     const handlePlay = () => {
       setIsPlaying(true);
+      isPlayingRef.current = true;
+    };
+
+    const handlePlaying = () => {
+      setIsBuffering(false);
+      isBufferingRef.current = false;
+      shouldAutoPlayNewTrackRef.current = false;
+      setIsPlaying(true);
+      isPlayingRef.current = true;
+    };
+
+    const handleWaiting = () => {
+      setIsBuffering(true);
+      isBufferingRef.current = true;
     };
 
     const handlePause = () => {
-      setIsPlaying(false);
+      if (!shouldAutoPlayNewTrackRef.current) {
+        setIsPlaying(false);
+        isPlayingRef.current = false;
+      }
     };
 
     const handleEnded = () => {
@@ -313,6 +387,8 @@ export const AudioProvider: React.FC<AudioProviderProps> = ({
     audio.addEventListener('timeupdate', handleTimeUpdate);
     audio.addEventListener('loadedmetadata', handleLoadedMetadata);
     audio.addEventListener('play', handlePlay);
+    audio.addEventListener('playing', handlePlaying);
+    audio.addEventListener('waiting', handleWaiting);
     audio.addEventListener('pause', handlePause);
     audio.addEventListener('ended', handleEnded);
 
@@ -320,6 +396,8 @@ export const AudioProvider: React.FC<AudioProviderProps> = ({
       audio.removeEventListener('timeupdate', handleTimeUpdate);
       audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
       audio.removeEventListener('play', handlePlay);
+      audio.removeEventListener('playing', handlePlaying);
+      audio.removeEventListener('waiting', handleWaiting);
       audio.removeEventListener('pause', handlePause);
       audio.removeEventListener('ended', handleEnded);
     };
@@ -330,28 +408,46 @@ export const AudioProvider: React.FC<AudioProviderProps> = ({
     const handleYtMessage = (event: MessageEvent) => {
       try {
         const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
-        if (data && data.event === 'infoDelivery' && data.info) {
+        if (data && (data.event === 'infoDelivery' || data.event === 'initialDelivery') && data.info) {
           if (typeof data.info.duration === 'number' && data.info.duration > 0) {
             setDuration(data.info.duration);
             durationRef.current = data.info.duration;
           }
-          if (typeof data.info.currentTime === 'number' && !isSeekingRef.current) {
-            // Calibrate drift if discrepancy is greater than 1.5s
-            setCurrentTime((prev) => {
-              if (Math.abs(prev - data.info.currentTime) > 1.5) {
-                return data.info.currentTime;
-              }
-              return prev;
-            });
-          }
+
           if (typeof data.info.playerState === 'number') {
-            // YT.PlayerState: 1 = PLAYING, 2 = PAUSED, 0 = ENDED
-            if (data.info.playerState === 1) {
+            const state = data.info.playerState;
+            // YT.PlayerState: 1 = PLAYING, 2 = PAUSED, 3 = BUFFERING, 0 = ENDED, -1 = UNSTARTED, 5 = CUED
+            if (state === 1) {
+              // Media is confirmed actively playing! Now unlock timeline
+              setIsBuffering(false);
+              isBufferingRef.current = false;
+              shouldAutoPlayNewTrackRef.current = false;
               setIsPlaying(true);
-            } else if (data.info.playerState === 2) {
-              setIsPlaying(false);
-            } else if (data.info.playerState === 0) {
+              isPlayingRef.current = true;
+            } else if (state === 3) {
+              // Video is buffering, lock timeline at current position
+              setIsBuffering(true);
+              isBufferingRef.current = true;
+            } else if (state === 2) {
+              // Paused
+              if (shouldAutoPlayNewTrackRef.current) {
+                // If this is a transition where we intended to play, tell YouTube to play rather than pausing the app
+                sendYtCommand('playVideo');
+              } else {
+                setIsPlaying(false);
+                isPlayingRef.current = false;
+                setIsBuffering(false);
+                isBufferingRef.current = false;
+              }
+            } else if (state === 0) {
               nextTrack();
+            }
+          }
+
+          if (typeof data.info.currentTime === 'number' && !isSeekingRef.current) {
+            // Update currentTime in sync with YouTube once playback is live
+            if (!isBufferingRef.current) {
+              setCurrentTime(data.info.currentTime);
             }
           }
         }
@@ -362,7 +458,7 @@ export const AudioProvider: React.FC<AudioProviderProps> = ({
     return () => {
       window.removeEventListener('message', handleYtMessage);
     };
-  }, [nextTrack]);
+  }, [nextTrack, sendYtCommand]);
 
   // YouTube initial handshake on track mount or change
   useEffect(() => {
@@ -377,23 +473,27 @@ export const AudioProvider: React.FC<AudioProviderProps> = ({
             );
           } catch {}
         }
-        if (isPlaying) {
+        if (isPlayingRef.current || shouldAutoPlayNewTrackRef.current) {
           sendYtCommand('playVideo');
         } else {
           sendYtCommand('pauseVideo');
         }
       };
-      const t1 = setTimeout(initYt, 400);
-      const t2 = setTimeout(initYt, 1200);
+
+      const t1 = setTimeout(initYt, 350);
+      const t2 = setTimeout(initYt, 850);
+      const t3 = setTimeout(initYt, 1500);
       return () => {
         clearTimeout(t1);
         clearTimeout(t2);
+        clearTimeout(t3);
       };
     }
-  }, [trackMediaInfo, isPlaying, sendYtCommand]);
+  }, [trackMediaInfo.videoId, sendYtCommand]);
 
   // Active High-Precision Playback Engine (100% Synchronous Timeline Movement)
   // Ensures the timeline slidebar always advances smoothly in real-time while audio is playing
+  // PAUSES execution while media player is buffering or loading new track
   useEffect(() => {
     if (!isPlaying) return;
 
@@ -403,8 +503,10 @@ export const AudioProvider: React.FC<AudioProviderProps> = ({
       const deltaSec = (now - lastTime) / 1000;
       lastTime = now;
 
-      // Do not overwrite user thumb while actively dragging/scrubbing
-      if (isSeekingRef.current) return;
+      // DO NOT advance timeline if user is actively seeking OR if media is still buffering/loading!
+      if (isSeekingRef.current || isBufferingRef.current) {
+        return;
+      }
 
       if (trackMediaInfo.type === 'direct' && audioRef.current && !audioRef.current.paused) {
         // Native HTML5 audio ground truth
@@ -429,7 +531,7 @@ export const AudioProvider: React.FC<AudioProviderProps> = ({
     }, 200);
 
     return () => clearInterval(interval);
-  }, [isPlaying, trackMediaInfo, nextTrack]);
+  }, [isPlaying, trackMediaInfo.type, nextTrack]);
 
   // Timeline Scrubbing: Start Seeking
   const startSeeking = useCallback(() => {
@@ -503,6 +605,7 @@ export const AudioProvider: React.FC<AudioProviderProps> = ({
     currentTrackIndex,
     currentTrack,
     isPlaying,
+    isBuffering,
     currentTime,
     duration,
     isSeeking,
@@ -528,6 +631,7 @@ export const AudioProvider: React.FC<AudioProviderProps> = ({
     currentTrackIndex,
     currentTrack,
     isPlaying,
+    isBuffering,
     currentTime,
     duration,
     isSeeking,
