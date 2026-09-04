@@ -1,22 +1,25 @@
-import React, { useState, useEffect } from 'react';
-import { GlassModal } from './GlassModal';
-import { GlassButton } from './GlassButton';
-import { 
-  Database, 
-  Cloud, 
-  KeyRound, 
-  CheckCircle2, 
-  Copy, 
-  Check, 
+import React, { useState, useEffect } from "react";
+import { GlassModal } from "./GlassModal";
+import { GlassButton } from "./GlassButton";
+import {
+  Database,
+  Cloud,
+  KeyRound,
+  CheckCircle2,
+  Copy,
+  Check,
   AlertTriangle,
   Server,
   RefreshCw,
   Activity,
   ShieldCheck,
   XCircle,
-  FileCode
-} from 'lucide-react';
-import { checkVercelServiceStatus, VercelServiceStatus } from '../../lib/vercelClient';
+  FileCode,
+} from "lucide-react";
+import {
+  checkVercelServiceStatus,
+  VercelServiceStatus,
+} from "../../lib/vercelClient";
 
 export const VERCEL_POSTGRES_SCHEMA_SQL = `-- Vercel Postgres Tables Schema for Bagas & Anita
 
@@ -95,12 +98,15 @@ interface SettingsModalProps {
 export const SettingsModal: React.FC<SettingsModalProps> = ({
   isOpen,
   onClose,
-  onRefreshData
+  onRefreshData,
 }) => {
-  const [activeTab, setActiveTab] = useState<'status' | 'schema' | 'auth'>('status');
+  const [activeTab, setActiveTab] = useState<"status" | "schema" | "auth">(
+    "status",
+  );
   const [copied, setCopied] = useState(false);
   const [copiedDiag, setCopiedDiag] = useState(false);
-  const [serviceStatus, setServiceStatus] = useState<VercelServiceStatus | null>(null);
+  const [serviceStatus, setServiceStatus] =
+    useState<VercelServiceStatus | null>(null);
   const [isPinging, setIsPinging] = useState(false);
 
   const fetchLiveStatus = async () => {
@@ -131,8 +137,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     setTimeout(() => setCopiedDiag(false), 2000);
   };
 
-  const isBlobReady = serviceStatus?.blob?.hasToken ?? serviceStatus?.hasBlobToken;
-  const isDbReady = serviceStatus?.postgres?.hasConfig ?? serviceStatus?.hasPostgres;
+  const isBlobReady =
+    serviceStatus?.blob?.hasToken ?? serviceStatus?.hasBlobToken;
+  const isDbReady =
+    serviceStatus?.postgres?.hasConfig ?? serviceStatus?.hasPostgres;
 
   return (
     <GlassModal
@@ -149,33 +157,33 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       {/* Tabs */}
       <div className="flex border-b border-white/10 mb-6 gap-2">
         <button
-          onClick={() => setActiveTab('status')}
+          onClick={() => setActiveTab("status")}
           className={`pb-2.5 px-3 text-sm font-medium border-b-2 transition-colors cursor-pointer flex items-center gap-1.5 ${
-            activeTab === 'status'
-              ? 'border-pink-500 text-pink-400'
-              : 'border-transparent text-slate-400 hover:text-slate-200'
+            activeTab === "status"
+              ? "border-pink-500 text-pink-400"
+              : "border-transparent text-slate-400 hover:text-slate-200"
           }`}
         >
           <Activity className="w-3.5 h-3.5" />
           Live Storage Status
         </button>
         <button
-          onClick={() => setActiveTab('schema')}
+          onClick={() => setActiveTab("schema")}
           className={`pb-2.5 px-3 text-sm font-medium border-b-2 transition-colors cursor-pointer flex items-center gap-1.5 ${
-            activeTab === 'schema'
-              ? 'border-pink-500 text-pink-400'
-              : 'border-transparent text-slate-400 hover:text-slate-200'
+            activeTab === "schema"
+              ? "border-pink-500 text-pink-400"
+              : "border-transparent text-slate-400 hover:text-slate-200"
           }`}
         >
           <FileCode className="w-3.5 h-3.5" />
           Postgres Schema
         </button>
         <button
-          onClick={() => setActiveTab('auth')}
+          onClick={() => setActiveTab("auth")}
           className={`pb-2.5 px-3 text-sm font-medium border-b-2 transition-colors cursor-pointer flex items-center gap-1.5 ${
-            activeTab === 'auth'
-              ? 'border-pink-500 text-pink-400'
-              : 'border-transparent text-slate-400 hover:text-slate-200'
+            activeTab === "auth"
+              ? "border-pink-500 text-pink-400"
+              : "border-transparent text-slate-400 hover:text-slate-200"
           }`}
         >
           <KeyRound className="w-3.5 h-3.5" />
@@ -183,21 +191,28 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         </button>
       </div>
 
-      {activeTab === 'status' && (
+      {activeTab === "status" && (
         <div className="space-y-4">
           {/* Header Action Bar */}
           <div className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/10 text-xs">
             <div className="flex items-center gap-2">
               <span className="relative flex h-2.5 w-2.5">
-                <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
-                  isBlobReady && isDbReady ? 'bg-emerald-400' : 'bg-pink-400'
-                }`}></span>
-                <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${
-                  isBlobReady && isDbReady ? 'bg-emerald-500' : 'bg-pink-500'
-                }`}></span>
+                <span
+                  className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
+                    isBlobReady && isDbReady ? "bg-emerald-400" : "bg-pink-400"
+                  }`}
+                ></span>
+                <span
+                  className={`relative inline-flex rounded-full h-2.5 w-2.5 ${
+                    isBlobReady && isDbReady ? "bg-emerald-500" : "bg-pink-500"
+                  }`}
+                ></span>
               </span>
               <span className="text-slate-300 font-medium">
-                Live Backend Diagnostics {serviceStatus?.executionTimeMs ? `(${serviceStatus.executionTimeMs}ms ping)` : ''}
+                Live Backend Diagnostics{" "}
+                {serviceStatus?.executionTimeMs
+                  ? `(${serviceStatus.executionTimeMs}ms ping)`
+                  : ""}
               </span>
             </div>
             <div className="flex items-center gap-2">
@@ -207,8 +222,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 className="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/15 text-slate-200 text-xs flex items-center gap-1 transition-all"
                 title="Copy live health report JSON"
               >
-                {copiedDiag ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-                <span>{copiedDiag ? 'Copied' : 'Copy Report'}</span>
+                {copiedDiag ? (
+                  <Check className="w-3 h-3 text-emerald-400" />
+                ) : (
+                  <Copy className="w-3 h-3" />
+                )}
+                <span>{copiedDiag ? "Copied" : "Copy Report"}</span>
               </button>
               <button
                 type="button"
@@ -216,7 +235,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 disabled={isPinging}
                 className="px-2.5 py-1 rounded-lg bg-pink-500/20 hover:bg-pink-500/30 text-pink-300 text-xs flex items-center gap-1 transition-all"
               >
-                <RefreshCw className={`w-3 h-3 ${isPinging ? 'animate-spin' : ''}`} />
+                <RefreshCw
+                  className={`w-3 h-3 ${isPinging ? "animate-spin" : ""}`}
+                />
                 <span>Test Live Ping</span>
               </button>
             </div>
@@ -241,7 +262,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 )}
               </div>
               <p className="text-slate-300 text-xs mt-1 leading-relaxed">
-                Stores high-resolution photos, videos, and voice notes into <code className="text-pink-300">photos/</code>, <code className="text-pink-300">videos/</code>, and <code className="text-pink-300">audio/</code> folders on Vercel Native Blob storage.
+                Stores high-resolution photos, videos, and voice notes into{" "}
+                <code className="text-pink-300">photos/</code>,{" "}
+                <code className="text-pink-300">videos/</code>, and{" "}
+                <code className="text-pink-300">audio/</code> folders on Vercel
+                Native Blob storage.
               </p>
               {serviceStatus?.blob?.tokenPreview && (
                 <div className="mt-2 text-[11px] font-mono text-slate-400 flex items-center gap-2">
@@ -265,7 +290,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 {isDbReady ? (
                   <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-medium flex items-center gap-1">
                     <CheckCircle2 className="w-3 h-3" />
-                    {serviceStatus?.postgres?.pingMs !== null ? `${serviceStatus?.postgres?.pingMs}ms Ping` : 'Connected'}
+                    {serviceStatus?.postgres?.pingMs !== null
+                      ? `${serviceStatus?.postgres?.pingMs}ms Ping`
+                      : "Connected"}
                   </span>
                 ) : (
                   <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 font-medium flex items-center gap-1">
@@ -274,27 +301,32 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 )}
               </div>
               <p className="text-slate-300 text-xs mt-1 leading-relaxed">
-                Persists gallery items, love letters, sticky notes, and audio player states. Automatically synced on page loads.
+                Persists gallery items, love letters, sticky notes, and audio
+                player states. Automatically synced on page loads.
               </p>
 
               {/* Verified Tables Badges */}
-              {serviceStatus?.postgres?.tables && serviceStatus.postgres.tables.length > 0 && (
-                <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
-                  <span className="text-[11px] text-slate-400">Verified DB Tables:</span>
-                  {serviceStatus.postgres.tables.map((tbl) => (
-                    <span
-                      key={tbl}
-                      className="text-[10px] font-mono px-2 py-0.5 rounded bg-purple-950/60 border border-purple-500/30 text-purple-200"
-                    >
-                      ✓ {tbl}
+              {serviceStatus?.postgres?.tables &&
+                serviceStatus.postgres.tables.length > 0 && (
+                  <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+                    <span className="text-[11px] text-slate-400">
+                      Verified DB Tables:
                     </span>
-                  ))}
-                </div>
-              )}
+                    {serviceStatus.postgres.tables.map((tbl) => (
+                      <span
+                        key={tbl}
+                        className="text-[10px] font-mono px-2 py-0.5 rounded bg-purple-950/60 border border-purple-500/30 text-purple-200"
+                      >
+                        ✓ {tbl}
+                      </span>
+                    ))}
+                  </div>
+                )}
 
               {serviceStatus?.postgres?.error && (
                 <div className="mt-2 p-2 rounded bg-red-950/40 border border-red-500/30 text-red-200 text-xs">
-                  <span className="font-bold">Postgres Info:</span> {serviceStatus.postgres.error}
+                  <span className="font-bold">Postgres Info:</span>{" "}
+                  {serviceStatus.postgres.error}
                 </div>
               )}
             </div>
@@ -302,17 +334,25 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         </div>
       )}
 
-      {activeTab === 'schema' && (
+      {activeTab === "schema" && (
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-xs text-slate-400">PostgreSQL table definitions:</span>
+            <span className="text-xs text-slate-400">
+              PostgreSQL table definitions:
+            </span>
             <GlassButton
               size="sm"
               variant="secondary"
               onClick={handleCopySchema}
-              icon={copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+              icon={
+                copied ? (
+                  <Check className="w-3.5 h-3.5 text-emerald-400" />
+                ) : (
+                  <Copy className="w-3.5 h-3.5" />
+                )
+              }
             >
-              {copied ? 'Copied!' : 'Copy SQL'}
+              {copied ? "Copied!" : "Copy SQL"}
             </GlassButton>
           </div>
           <pre className="p-4 rounded-xl bg-slate-950/80 border border-white/10 text-xs font-mono text-pink-200 overflow-x-auto max-h-72">
@@ -321,7 +361,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         </div>
       )}
 
-      {activeTab === 'auth' && (
+      {activeTab === "auth" && (
         <div className="space-y-3">
           <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-3">
             <div className="text-xs font-semibold text-slate-300 uppercase tracking-wider">
@@ -332,20 +372,29 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <div className="text-pink-300 font-semibold flex items-center gap-1.5">
                   <KeyRound className="w-3.5 h-3.5" /> Bagas ID
                 </div>
-                <div className="text-white">ID: <code className="text-pink-200 font-mono">Bagas</code></div>
-                <div className="text-white">PIN: <code className="text-pink-200 font-mono">1803</code></div>
+                <div className="text-white">
+                  ID: <code className="text-pink-200 font-mono">Bagas</code>
+                </div>
+                <div className="text-white">
+                  PIN: <code className="text-pink-200 font-mono">1803</code>
+                </div>
               </div>
 
               <div className="p-3 rounded-xl bg-slate-950/60 border border-white/5 space-y-1">
                 <div className="text-pink-300 font-semibold flex items-center gap-1.5">
                   <KeyRound className="w-3.5 h-3.5" /> Anita ID
                 </div>
-                <div className="text-white">ID: <code className="text-pink-200 font-mono">Anita</code></div>
-                <div className="text-white">PIN: <code className="text-pink-200 font-mono">1209</code></div>
+                <div className="text-white">
+                  ID: <code className="text-pink-200 font-mono">Anita</code>
+                </div>
+                <div className="text-white">
+                  PIN: <code className="text-pink-200 font-mono">1209</code>
+                </div>
               </div>
             </div>
             <div className="text-[11px] text-slate-400">
-              Universal master password: <code className="text-pink-300 font-mono">bagas ganteng banget</code>
+              Universal master password:{" "}
+              <code className="text-pink-300 font-mono">juni2026</code>
             </div>
           </div>
         </div>

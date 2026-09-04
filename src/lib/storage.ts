@@ -1,17 +1,24 @@
-import { GalleryItem, LoveLetter, StickyNote, AudioMemory, TimelineMilestone, AppConfig } from '../types';
+import {
+  GalleryItem,
+  LoveLetter,
+  StickyNote,
+  AudioMemory,
+  TimelineMilestone,
+  AppConfig,
+} from "../types";
 
 export const DEFAULT_CONFIG: AppConfig = {
   coupleNames: {
-    partner1: 'Bagas',
-    partner2: 'Anita'
+    partner1: "Bagas",
+    partner2: "Anita",
   },
   // startDate: '2022-04-16', // (Uncomment dan isi tanggal jadian ketika sudah resmi ya! Format: YYYY-MM-DD)
   // anniversaryDate: '04-16', // (Uncomment dan isi tanggal jadian tahunan ya! Format: MM-DD)
-  startDate: '',
-  anniversaryDate: '',
-  hardcodedPassword: 'bagas ganteng banget',
-  googleDriveFolderUrl: '',
-  googleDriveFolderId: ''
+  startDate: "",
+  anniversaryDate: "",
+  hardcodedPassword: "juni2026",
+  googleDriveFolderUrl: "",
+  googleDriveFolderId: "",
 };
 
 export const INITIAL_GALLERY: GalleryItem[] = [];
@@ -39,9 +46,9 @@ class StorageManager {
   }> {
     try {
       // Try /api/data first, then fallback to /api/all-data
-      let res = await fetch('/api/data', { cache: 'no-store' });
+      let res = await fetch("/api/data", { cache: "no-store" });
       if (!res.ok) {
-        res = await fetch('/api/all-data', { cache: 'no-store' });
+        res = await fetch("/api/all-data", { cache: "no-store" });
       }
 
       if (res.ok) {
@@ -51,19 +58,26 @@ class StorageManager {
           if (Array.isArray(data.letters)) this.saveLetters(data.letters);
           if (Array.isArray(data.notes)) this.saveNotes(data.notes);
           if (Array.isArray(data.audios)) this.saveAudios(data.audios);
-          if (Array.isArray(data.milestones)) this.saveMilestones(data.milestones);
+          if (Array.isArray(data.milestones))
+            this.saveMilestones(data.milestones);
 
           return {
-            gallery: Array.isArray(data.gallery) ? data.gallery : this.getGallery(),
-            letters: Array.isArray(data.letters) ? data.letters : this.getLetters(),
+            gallery: Array.isArray(data.gallery)
+              ? data.gallery
+              : this.getGallery(),
+            letters: Array.isArray(data.letters)
+              ? data.letters
+              : this.getLetters(),
             notes: Array.isArray(data.notes) ? data.notes : this.getNotes(),
             audios: Array.isArray(data.audios) ? data.audios : this.getAudios(),
-            milestones: Array.isArray(data.milestones) ? data.milestones : this.getMilestones(),
+            milestones: Array.isArray(data.milestones)
+              ? data.milestones
+              : this.getMilestones(),
           };
         }
       }
     } catch (e) {
-      console.warn('API sync fallback to localStorage:', e);
+      console.warn("API sync fallback to localStorage:", e);
     }
     return {
       gallery: this.getGallery(),
@@ -77,7 +91,7 @@ class StorageManager {
   // Gallery CRUD
   getGallery(): GalleryItem[] {
     try {
-      const data = localStorage.getItem(this.getStorageKey('gallery'));
+      const data = localStorage.getItem(this.getStorageKey("gallery"));
       return data ? JSON.parse(data) : INITIAL_GALLERY;
     } catch {
       return INITIAL_GALLERY;
@@ -86,9 +100,12 @@ class StorageManager {
 
   saveGallery(items: GalleryItem[]): void {
     try {
-      localStorage.setItem(this.getStorageKey('gallery'), JSON.stringify(items));
+      localStorage.setItem(
+        this.getStorageKey("gallery"),
+        JSON.stringify(items),
+      );
     } catch (e) {
-      console.error('Failed to save gallery to localStorage', e);
+      console.error("Failed to save gallery to localStorage", e);
     }
   }
 
@@ -97,13 +114,13 @@ class StorageManager {
     this.saveGallery(items);
 
     try {
-      await fetch('/api/data', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ table: 'gallery', data: item }),
+      await fetch("/api/data", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ table: "gallery", data: item }),
       });
     } catch (err) {
-      console.warn('API gallery insert fallback:', err);
+      console.warn("API gallery insert fallback:", err);
     }
   }
 
@@ -112,9 +129,9 @@ class StorageManager {
     this.saveGallery(items);
 
     try {
-      await fetch(`/api/data?table=gallery&id=${id}`, { method: 'DELETE' });
+      await fetch(`/api/data?table=gallery&id=${id}`, { method: "DELETE" });
     } catch (err) {
-      console.warn('API gallery delete fallback:', err);
+      console.warn("API gallery delete fallback:", err);
     }
   }
 
@@ -123,20 +140,20 @@ class StorageManager {
     this.saveGallery(items);
 
     try {
-      await fetch('/api/data', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ table: 'gallery', data: item }),
+      await fetch("/api/data", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ table: "gallery", data: item }),
       });
     } catch (err) {
-      console.warn('API gallery update fallback:', err);
+      console.warn("API gallery update fallback:", err);
     }
   }
 
   // Letters CRUD
   getLetters(): LoveLetter[] {
     try {
-      const data = localStorage.getItem(this.getStorageKey('letters'));
+      const data = localStorage.getItem(this.getStorageKey("letters"));
       return data ? JSON.parse(data) : INITIAL_LETTERS;
     } catch {
       return INITIAL_LETTERS;
@@ -145,24 +162,30 @@ class StorageManager {
 
   saveLetters(items: LoveLetter[]): void {
     try {
-      localStorage.setItem(this.getStorageKey('letters'), JSON.stringify(items));
+      localStorage.setItem(
+        this.getStorageKey("letters"),
+        JSON.stringify(items),
+      );
     } catch (e) {
-      console.error('Failed to save letters', e);
+      console.error("Failed to save letters", e);
     }
   }
 
   async addLetterAsync(letter: LoveLetter): Promise<void> {
-    const items = [letter, ...this.getLetters().filter((l) => l.id !== letter.id)];
+    const items = [
+      letter,
+      ...this.getLetters().filter((l) => l.id !== letter.id),
+    ];
     this.saveLetters(items);
 
     try {
-      await fetch('/api/data', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ table: 'letters', data: letter }),
+      await fetch("/api/data", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ table: "letters", data: letter }),
       });
     } catch (err) {
-      console.warn('API letter insert fallback:', err);
+      console.warn("API letter insert fallback:", err);
     }
   }
 
@@ -171,31 +194,33 @@ class StorageManager {
     this.saveLetters(items);
 
     try {
-      await fetch(`/api/data?table=letters&id=${id}`, { method: 'DELETE' });
+      await fetch(`/api/data?table=letters&id=${id}`, { method: "DELETE" });
     } catch (err) {
-      console.warn('API letter delete fallback:', err);
+      console.warn("API letter delete fallback:", err);
     }
   }
 
   async updateLetterAsync(letter: LoveLetter): Promise<void> {
-    const items = this.getLetters().map((l) => (l.id === letter.id ? letter : l));
+    const items = this.getLetters().map((l) =>
+      l.id === letter.id ? letter : l,
+    );
     this.saveLetters(items);
 
     try {
-      await fetch('/api/data', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ table: 'letters', data: letter }),
+      await fetch("/api/data", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ table: "letters", data: letter }),
       });
     } catch (err) {
-      console.warn('API letter update fallback:', err);
+      console.warn("API letter update fallback:", err);
     }
   }
 
   // Notes CRUD
   getNotes(): StickyNote[] {
     try {
-      const data = localStorage.getItem(this.getStorageKey('notes'));
+      const data = localStorage.getItem(this.getStorageKey("notes"));
       return data ? JSON.parse(data) : INITIAL_NOTES;
     } catch {
       return INITIAL_NOTES;
@@ -204,9 +229,9 @@ class StorageManager {
 
   saveNotes(items: StickyNote[]): void {
     try {
-      localStorage.setItem(this.getStorageKey('notes'), JSON.stringify(items));
+      localStorage.setItem(this.getStorageKey("notes"), JSON.stringify(items));
     } catch (e) {
-      console.error('Failed to save notes', e);
+      console.error("Failed to save notes", e);
     }
   }
 
@@ -215,13 +240,13 @@ class StorageManager {
     this.saveNotes(items);
 
     try {
-      await fetch('/api/data', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ table: 'notes', data: note }),
+      await fetch("/api/data", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ table: "notes", data: note }),
       });
     } catch (err) {
-      console.warn('API note insert fallback:', err);
+      console.warn("API note insert fallback:", err);
     }
   }
 
@@ -230,9 +255,9 @@ class StorageManager {
     this.saveNotes(items);
 
     try {
-      await fetch(`/api/data?table=notes&id=${id}`, { method: 'DELETE' });
+      await fetch(`/api/data?table=notes&id=${id}`, { method: "DELETE" });
     } catch (err) {
-      console.warn('API note delete fallback:', err);
+      console.warn("API note delete fallback:", err);
     }
   }
 
@@ -241,20 +266,20 @@ class StorageManager {
     this.saveNotes(items);
 
     try {
-      await fetch('/api/data', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ table: 'notes', data: note }),
+      await fetch("/api/data", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ table: "notes", data: note }),
       });
     } catch (err) {
-      console.warn('API note update fallback:', err);
+      console.warn("API note update fallback:", err);
     }
   }
 
   // Audios CRUD
   getAudios(): AudioMemory[] {
     try {
-      const data = localStorage.getItem(this.getStorageKey('audios'));
+      const data = localStorage.getItem(this.getStorageKey("audios"));
       return data ? JSON.parse(data) : INITIAL_AUDIOS;
     } catch {
       return INITIAL_AUDIOS;
@@ -263,9 +288,9 @@ class StorageManager {
 
   saveAudios(items: AudioMemory[]): void {
     try {
-      localStorage.setItem(this.getStorageKey('audios'), JSON.stringify(items));
+      localStorage.setItem(this.getStorageKey("audios"), JSON.stringify(items));
     } catch (e) {
-      console.error('Failed to save audios', e);
+      console.error("Failed to save audios", e);
     }
   }
 
@@ -274,13 +299,13 @@ class StorageManager {
     this.saveAudios(items);
 
     try {
-      await fetch('/api/data', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ table: 'audios', data: audio }),
+      await fetch("/api/data", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ table: "audios", data: audio }),
       });
     } catch (err) {
-      console.warn('API audio insert fallback:', err);
+      console.warn("API audio insert fallback:", err);
     }
   }
 
@@ -289,16 +314,16 @@ class StorageManager {
     this.saveAudios(items);
 
     try {
-      await fetch(`/api/data?table=audios&id=${id}`, { method: 'DELETE' });
+      await fetch(`/api/data?table=audios&id=${id}`, { method: "DELETE" });
     } catch (err) {
-      console.warn('API audio delete fallback:', err);
+      console.warn("API audio delete fallback:", err);
     }
   }
 
   // Milestones CRUD
   getMilestones(): TimelineMilestone[] {
     try {
-      const data = localStorage.getItem(this.getStorageKey('milestones'));
+      const data = localStorage.getItem(this.getStorageKey("milestones"));
       return data ? JSON.parse(data) : INITIAL_MILESTONES;
     } catch {
       return INITIAL_MILESTONES;
@@ -307,24 +332,30 @@ class StorageManager {
 
   saveMilestones(items: TimelineMilestone[]): void {
     try {
-      localStorage.setItem(this.getStorageKey('milestones'), JSON.stringify(items));
+      localStorage.setItem(
+        this.getStorageKey("milestones"),
+        JSON.stringify(items),
+      );
     } catch (e) {
-      console.error('Failed to save milestones', e);
+      console.error("Failed to save milestones", e);
     }
   }
 
   async addMilestoneAsync(milestone: TimelineMilestone): Promise<void> {
-    const items = [milestone, ...this.getMilestones().filter((m) => m.id !== milestone.id)];
+    const items = [
+      milestone,
+      ...this.getMilestones().filter((m) => m.id !== milestone.id),
+    ];
     this.saveMilestones(items);
 
     try {
-      await fetch('/api/data', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ table: 'milestones', data: milestone }),
+      await fetch("/api/data", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ table: "milestones", data: milestone }),
       });
     } catch (err) {
-      console.warn('API milestone insert fallback:', err);
+      console.warn("API milestone insert fallback:", err);
     }
   }
 
@@ -333,31 +364,33 @@ class StorageManager {
     this.saveMilestones(items);
 
     try {
-      await fetch(`/api/data?table=milestones&id=${id}`, { method: 'DELETE' });
+      await fetch(`/api/data?table=milestones&id=${id}`, { method: "DELETE" });
     } catch (err) {
-      console.warn('API milestone delete fallback:', err);
+      console.warn("API milestone delete fallback:", err);
     }
   }
 
   async updateMilestoneAsync(milestone: TimelineMilestone): Promise<void> {
-    const items = this.getMilestones().map((m) => (m.id === milestone.id ? milestone : m));
+    const items = this.getMilestones().map((m) =>
+      m.id === milestone.id ? milestone : m,
+    );
     this.saveMilestones(items);
 
     try {
-      await fetch('/api/data', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ table: 'milestones', data: milestone }),
+      await fetch("/api/data", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ table: "milestones", data: milestone }),
       });
     } catch (err) {
-      console.warn('API milestone update fallback:', err);
+      console.warn("API milestone update fallback:", err);
     }
   }
 
   // Auth & Session
   isAuthenticated(): boolean {
     try {
-      return localStorage.getItem(this.getStorageKey('session')) === 'true';
+      return localStorage.getItem(this.getStorageKey("session")) === "true";
     } catch {
       return false;
     }
@@ -366,12 +399,12 @@ class StorageManager {
   setAuthenticated(value: boolean): void {
     try {
       if (value) {
-        localStorage.setItem(this.getStorageKey('session'), 'true');
+        localStorage.setItem(this.getStorageKey("session"), "true");
       } else {
-        localStorage.removeItem(this.getStorageKey('session'));
+        localStorage.removeItem(this.getStorageKey("session"));
       }
     } catch (e) {
-      console.error('Failed to update session', e);
+      console.error("Failed to update session", e);
     }
   }
 }

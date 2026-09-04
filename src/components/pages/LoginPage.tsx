@@ -1,28 +1,28 @@
-import React, { useState } from 'react';
-import { Heart, Lock, Eye, EyeOff } from 'lucide-react';
-import { GlassCard } from '../ui/GlassCard';
-import { GlassButton } from '../ui/GlassButton';
+import React, { useState } from "react";
+import { Heart, Lock, Eye, EyeOff } from "lucide-react";
+import { GlassCard } from "../ui/GlassCard";
+import { GlassButton } from "../ui/GlassButton";
 
 interface LoginPageProps {
   onLoginSuccess: () => void;
 }
 
 export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
-  const [password, setPassword] = useState('');
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError("");
     setIsLoading(true);
 
     setTimeout(() => {
-      if (password === 'bagas ganteng banget') {
+      if (password === "juni2026") {
         onLoginSuccess();
       } else {
-        setError('Passwordnya Tanya Bagas ya cantik 😘');
+        setError("Passwordnya Tanya Bagas ya cantik 😘");
         setIsLoading(false);
       }
     }, 200);
@@ -63,12 +63,12 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
 
               <div className="relative">
                 <input
-                  type={showPassword ? 'text' : 'password'}
+                  type={showPassword ? "text" : "password"}
                   required
                   value={password}
                   onChange={(e) => {
                     setPassword(e.target.value);
-                    if (error) setError('');
+                    if (error) setError("");
                   }}
                   placeholder="Masukkan password..."
                   autoFocus
@@ -80,7 +80,11 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                   className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-white rounded-lg transition-colors cursor-pointer"
                   aria-label="Toggle password visibility"
                 >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  {showPassword ? (
+                    <EyeOff className="w-4 h-4" />
+                  ) : (
+                    <Eye className="w-4 h-4" />
+                  )}
                 </button>
               </div>
             </div>

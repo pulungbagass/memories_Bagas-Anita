@@ -46,7 +46,7 @@ Web ini mengedepankan pengalaman visual yang intim dan menyenangkan:
 
 - **Password Masuk Saat Ini:**
   ```text
-  bagas ganteng banget
+  rahasia :v
   ```
 - **Lokasi Kode Password:**
   - `src/components/pages/LoginPage.tsx` (Validasi input dan teks petunjuk)
